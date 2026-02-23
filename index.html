@@ -260,12 +260,20 @@
 
             // 上星期完成課堂
             let lastWeekClasses = classesData.filter(row => row[6] === selectedName && isDateInWeek(parseChineseDate(row[3]), lastSunday));
+            // 按照日期排序（自然等同於按星期順序排列）
             lastWeekClasses.sort((a, b) => parseChineseDate(a[3]) - parseChineseDate(b[3]));
+            
             const classesList = document.getElementById('completedClassesList');
             classesList.innerHTML = '';
             if(lastWeekClasses.length === 0) classesList.innerHTML = '<li class="text-gray-400">無紀錄</li>';
+            
+            const weekdaysMap = ['日', '一', '二', '三', '四', '五', '六'];
             lastWeekClasses.forEach(cls => {
-                classesList.innerHTML += `<li>${cls[4] || ''} - ${cls[8] || cls[9] || '課堂'} (${cls[5]})</li>`;
+                let dateObj = parseChineseDate(cls[3]);
+                let weekdayStr = dateObj ? `星期${weekdaysMap[dateObj.getDay()]}` : '未知';
+                
+                // 依要求更新格式：（星期）：（A行索引0）-（F行索引5）
+                classesList.innerHTML += `<li>${weekdayStr}：${cls[0] || ''} - ${cls[5] || ''}</li>`;
             });
 
             // Preview 計算邏輯
