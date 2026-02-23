@@ -53,9 +53,7 @@
         <div class="col-md-4 col-12">
             <div class="card">
                 <div class="card-header bg-warning text-dark">Tasks to follow up</div>
-                <div class="card-body" id="followup-tasks">
-                    資料讀取中...
-                </div>
+                <div class="card-body" id="followup-tasks">資料讀取中...</div>
             </div>
         </div>
 
@@ -77,9 +75,7 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header">Obstacles & Notes</div>
-                <div class="card-body p-2">
-                    <textarea placeholder="請輸入內容..."></textarea>
-                </div>
+                <div class="card-body p-2"><textarea placeholder="請輸入內容..."></textarea></div>
             </div>
         </div>
     </div>
@@ -89,18 +85,14 @@
         <div class="col-md-6 col-12">
             <div class="card">
                 <div class="card-header bg-primary text-white">Time Prediction (本週預測)</div>
-                <div class="card-body" id="time-prediction" style="font-size: 0.95rem; line-height: 1.8;">
-                    資料讀取中...
-                </div>
+                <div class="card-body" id="time-prediction" style="font-size: 0.95rem; line-height: 1.8;">資料讀取中...</div>
             </div>
         </div>
 
         <div class="col-md-6 col-12">
             <div class="card">
                 <div class="card-header bg-secondary text-white">Classes in this week</div>
-                <div class="card-body" id="preview-classes">
-                    資料讀取中...
-                </div>
+                <div class="card-body" id="preview-classes">資料讀取中...</div>
             </div>
         </div>
     </div>
@@ -109,9 +101,7 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header bg-danger text-white">To do list</div>
-                <div class="card-body" id="todo-tasks">
-                    資料讀取中...
-                </div>
+                <div class="card-body" id="todo-tasks">資料讀取中...</div>
             </div>
         </div>
     </div>
@@ -120,9 +110,7 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header">Additional Notes</div>
-                <div class="card-body p-2">
-                    <textarea placeholder="請輸入內容..."></textarea>
-                </div>
+                <div class="card-body p-2"><textarea placeholder="請輸入內容..."></textarea></div>
             </div>
         </div>
     </div>
@@ -140,14 +128,9 @@
 <script>
     const hkHolidays2026 = ['2026-01-01','2026-02-17','2026-02-18','2026-02-19','2026-04-03','2026-04-04','2026-04-06','2026-04-07','2026-05-01','2026-05-25','2026-06-19','2026-07-01','2026-09-26','2026-10-01','2026-10-26','2026-12-25','2026-12-26'];
 
-    // 確保這裡的網址是 Google Sheet 發佈為 CSV 的格式
-    const masterTaskUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLnU0BMgl4AFXJuTVBtdmcCvuhDbv7TJxLHGK0BQZ9pJTOxdcLQ2QU1inCjXeZKJdc9v3-y4Kfk4aS/pub?output=csv';
-    const classUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQFFF43IJhu4qgR8KiR_Oo9lwv7LkuTcjHzebpTvUd-SnnivG_5GwDT3-JzEncLTxKXbZuQ8LnU90n3/pub?output=csv';
-
     let tasksData = [];
     let classesData = [];
 
-    // 初始化日期與選單
     function initDates() {
         document.getElementById('current-date-display').innerText = `今日日期：${dayjs().format('YYYY年MM月DD日')}`;
         const weekSelect = document.getElementById('week-select');
@@ -165,7 +148,6 @@
         }
     }
 
-    // 解析中文日期
     function parseChineseDate(dateStr) {
         if (!dateStr) return null;
         const match = dateStr.match(/(\d+)年(\d+)月(\d+)日/);
@@ -175,7 +157,6 @@
         return dayjs(dateStr); 
     }
 
-    // 解析時間長度 (分鐘)
     function parseDuration(timeStr) {
         if (!timeStr || !timeStr.includes('-')) return 0;
         let [start, end] = timeStr.split('-');
@@ -184,7 +165,6 @@
         return (eh * 60 + em) - (sh * 60 + sm);
     }
     
-    // 計算課後時間
     function calcAfterClassTime(timeStr) {
         if (!timeStr || !timeStr.includes('-')) return 0;
         let end = timeStr.split('-')[1];
@@ -194,31 +174,29 @@
         return limitMins > endMins ? (limitMins - endMins) : 0;
     }
 
-    // 排序任務
     function sortTasks(a, b) {
         let aImp = (a[5] || '').toUpperCase() === 'YES' ? 1 : 0; 
         let bImp = (b[5] || '').toUpperCase() === 'YES' ? 1 : 0;
         let aUrg = (a[6] || '').toUpperCase() === 'YES' ? 1 : 0; 
         let bUrg = (b[6] || '').toUpperCase() === 'YES' ? 1 : 0;
-        
         if (aImp !== bImp) return bImp - aImp;
         return bUrg - aUrg;
     }
 
-    // 載入資料 (強化錯誤防護與 HTML 偵測)
     async function loadData() {
+        // 加入時間戳記 (Cache-Busting)，強迫抓取最新資料
+        const timestamp = new Date().getTime();
+        const masterTaskUrl = `https://docs.google.com/spreadsheets/d/e/2PACX-1vSLnU0BMgl4AFXJuTVBtdmcCvuhDbv7TJxLHGK0BQZ9pJTOxdcLQ2QU1inCjXeZKJdc9v3-y4Kfk4aS/pub?output=csv&t=${timestamp}`;
+        const classUrl = `https://docs.google.com/spreadsheets/d/e/2PACX-1vQFFF43IJhu4qgR8KiR_Oo9lwv7LkuTcjHzebpTvUd-SnnivG_5GwDT3-JzEncLTxKXbZuQ8LnU90n3/pub?output=csv&t=${timestamp}`;
+
         try {
             const [taskRes, classRes] = await Promise.all([
                 fetch(masterTaskUrl).then(r => r.text()),
                 fetch(classUrl).then(r => r.text())
             ]);
 
-            // 檢查是否回傳了 HTML 網頁 (代表發佈格式設定錯誤)
-            if (taskRes.trim().toLowerCase().startsWith('<!doctype') || taskRes.trim().toLowerCase().startsWith('<html')) {
-                throw new Error("「Master Task List」的發佈格式錯誤，請在 Google Sheet 內重新發佈為 CSV 格式。");
-            }
-            if (classRes.trim().toLowerCase().startsWith('<!doctype') || classRes.trim().toLowerCase().startsWith('<html')) {
-                throw new Error("「課堂總匯」的發佈格式錯誤，請在 Google Sheet 內重新發佈為 CSV 格式。");
+            if (taskRes.trim().toLowerCase().startsWith('<!doctype') || classRes.trim().toLowerCase().startsWith('<!doctype')) {
+                throw new Error("Google 回傳了網頁而不是 CSV！請檢查 Google Sheet 內「發佈到網路」的格式是否為「逗號分隔值 (.csv)」");
             }
 
             tasksData = Papa.parse(taskRes, { header: false, skipEmptyLines: true }).data.slice(1);
@@ -226,13 +204,12 @@
 
             renderUI();
         } catch (error) {
-            console.error("資料載入失敗:", error);
-            alert(`載入資料失敗！\n錯誤訊息：${error.message}`);
-            document.querySelectorAll('#review-tasks, #review-classes, #followup-tasks, #todo-tasks, #preview-classes, #time-prediction').forEach(el => el.innerHTML = `<span class="text-danger">⚠️ ${error.message}</span>`);
+            console.error("載入失敗:", error);
+            alert(`讀取失敗！\n\n系統訊息：${error.message}\n\n如果您確定連結沒有問題，請嘗試使用「無痕視窗」開啟這個網頁。`);
+            document.querySelectorAll('#review-tasks, #review-classes, #followup-tasks, #todo-tasks, #preview-classes, #time-prediction').forEach(el => el.innerHTML = `<span class="text-danger">⚠️ 無法載入資料</span>`);
         }
     }
 
-    // 渲染 UI
     function renderUI() {
         try {
             const empName = document.getElementById('employee-select').value;
@@ -243,7 +220,7 @@
             const prevWeekStart = currentWeekStart.subtract(1, 'week');
             const prevWeekEnd = prevWeekStart.add(6, 'day');
 
-            // 1. Finished Tasks (加強陣列長度防呆)
+            // 1. Finished Tasks
             let finishedTasks = tasksData.filter(row => {
                 if (!row || row.length < 8) return false;
                 let pics = (row[4] || '').split('/');
@@ -271,7 +248,7 @@
                 ? prevClasses.map(c => `<div class="task-item">(${c[4] || ''})：${c[0] || ''}-${c[5] || ''}</div>`).join('')
                 : '<div class="text-muted">無紀錄</div>';
 
-            // 3. Follow up / To do Tasks (未完成)
+            // 3. Tasks to follow up
             let unfinishedTasks = tasksData.filter(row => {
                 if (!row || row.length < 8) return false;
                 let pics = (row[4] || '').split('/');
@@ -320,7 +297,7 @@
             let dailyLastClass = {};
 
             currClasses.forEach(c => {
-                if(!c[3] || !c[5]) return; // 略過沒有日期或時間的課堂
+                if(!c[3] || !c[5]) return; 
                 let cDate = dayjs(c[3]);
                 let dayOfWeek = cDate.day();
                 let duration = parseDuration(c[5]);
@@ -362,16 +339,14 @@
                 <b>Teaching Ratio in this week:</b> ${currClasses.length}/${workDays} = ${teachingRatio}
             `;
         } catch (e) {
-            console.error("UI渲染發生錯誤: ", e);
-            document.getElementById('time-prediction').innerHTML = `<span class="text-danger">介面渲染時發生錯誤，請檢查資料格式是否正確。</span>`;
+            console.error("渲染錯誤: ", e);
+            document.getElementById('time-prediction').innerHTML = `<span class="text-danger">介面渲染時發生錯誤。</span>`;
         }
     }
 
-    // 事件綁定
     document.getElementById('employee-select').addEventListener('change', renderUI);
     document.getElementById('week-select').addEventListener('change', renderUI);
 
-    // PDF 匯出
     document.getElementById('export-btn').addEventListener('click', function() {
         const element = document.getElementById('pdf-content');
         const empName = document.getElementById('employee-select').value;
@@ -387,11 +362,9 @@
             html2canvas:  { scale: 2 },
             jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
         };
-
         html2pdf().set(opt).from(element).save();
     });
 
-    // 初始化執行
     initDates();
     loadData();
 </script>
