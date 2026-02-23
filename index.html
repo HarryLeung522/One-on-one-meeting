@@ -1,372 +1,418 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>One on One Meeting Form</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .card { border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 1rem; height: 100%; }
-        .card-header { background-color: #ffffff; border-bottom: 2px solid #e9ecef; font-weight: bold; color: #333; border-radius: 10px 10px 0 0 !important; }
-        .section-title { font-size: 1.2rem; font-weight: bold; margin: 1.5rem 0 1rem 0; color: #2c3e50; border-left: 4px solid #3498db; padding-left: 10px; }
-        .task-item { font-size: 0.9rem; padding: 5px 0; border-bottom: 1px dashed #eee; }
-        .task-item:last-child { border-bottom: none; }
-        textarea { width: 100%; border: 1px solid #ced4da; border-radius: 5px; padding: 10px; resize: vertical; min-height: 100px; }
-        .btn-export { background-color: #27ae60; color: white; font-weight: bold; width: 100%; padding: 12px; border-radius: 8px; margin-top: 20px; }
-        .btn-export:hover { background-color: #2ecc71; color: white; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>One on One Meeting Form</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+    :root {
+        --primary: #2c3e50;
+        --bg: #f4f7f6;
+        --card-bg: #ffffff;
+        --border: #e0e0e0;
+    }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: #333; margin: 0; padding: 15px; }
+    #dashboard { max-width: 1200px; margin: auto; }
+    .header-section { background: var(--card-bg); padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; justify-content: space-between; }
+    .header-section h1 { margin: 0; font-size: 1.5em; width: 100%; color: var(--primary); }
+    .controls select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px; font-size: 1em; }
+    
+    .section-title { border-bottom: 2px solid var(--primary); padding-bottom: 5px; margin: 25px 0 15px 0; color: var(--primary); font-size: 1.3em; }
+    .row { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
+    .card { background: var(--card-bg); border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); padding: 15px; flex: 1; min-width: 300px; box-sizing: border-box; }
+    .card h3 { margin-top: 0; font-size: 1.1em; color: var(--primary); border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px; }
+    
+    ul { list-style: none; padding: 0; margin: 0; }
+    li { padding: 8px 0; border-bottom: 1px dashed #eee; font-size: 0.9em; }
+    li:last-child { border-bottom: none; }
+    
+    .urgent-badge { background: #e74c3c; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; }
+    .important-badge { background: #f39c12; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; }
+    
+    textarea { width: 100%; min-height: 100px; border: 1px solid var(--border); border-radius: 4px; padding: 10px; box-sizing: border-box; resize: vertical; font-family: inherit; }
+    .btn-export { background: #27ae60; color: white; border: none; padding: 12px 20px; font-size: 1.1em; border-radius: 5px; cursor: pointer; display: block; width: 100%; max-width: 300px; margin: 30px auto; text-align: center; font-weight: bold; }
+    .btn-export:hover { background: #219150; }
+    
+    .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; font-size: 1.5em; font-weight: bold; display: none; }
+    
+    /* Time Prediction Grid */
+    .time-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9em; }
+    .time-item { background: #f9f9f9; padding: 8px; border-radius: 4px; }
+    .time-item span { font-weight: bold; color: var(--primary); display: block; }
+</style>
 </head>
 <body>
 
-<div class="container py-4" id="pdf-content">
-    <div class="row mb-4 align-items-center">
-        <div class="col-md-6 col-12 mb-2 mb-md-0">
-            <h2 class="mb-1 text-primary" style="font-weight: 800;">One on One Meeting Form</h2>
-            <div class="text-muted" id="current-date-display">今日日期：載入中...</div>
+<div class="loading-overlay" id="loading">讀取資料中，請稍候...</div>
+
+<div id="dashboard">
+    <div class="header-section">
+        <h1>One on One Meeting Form</h1>
+        <div>
+            <strong>今日日期: </strong> <span id="today-date"></span>
         </div>
-        <div class="col-md-6 col-12 d-flex justify-content-md-end gap-2 flex-wrap">
-            <select id="employee-select" class="form-select w-auto">
+        <div class="controls">
+            <select id="week-select" onchange="refreshData()"></select>
+            <select id="person-select" onchange="refreshData()">
                 <option value="Harry">Harry</option>
                 <option value="Zoe">Zoe</option>
                 <option value="Ian">Ian</option>
                 <option value="Chris">Chris</option>
             </select>
-            <select id="week-select" class="form-select w-auto"></select>
         </div>
     </div>
 
-    <div class="section-title">Review</div>
-    <div class="row g-3">
-        <div class="col-md-4 col-12">
-            <div class="card">
-                <div class="card-header bg-success text-white">上週回顧 (Finished Tasks & Classes)</div>
-                <div class="card-body">
-                    <h6 class="text-muted border-bottom pb-1">已完成工作 (Master Task List)</h6>
-                    <div id="review-tasks" class="mb-3">資料讀取中...</div>
-                    <h6 class="text-muted border-bottom pb-1">已完成課堂 (課堂總匯)</h6>
-                    <div id="review-classes">資料讀取中...</div>
+    <h2 class="section-title">Review</h2>
+    <div class="row">
+        <div class="card">
+            <h3>Finished tasks (Last Week)</h3>
+            <ul id="rev-fin-tasks"></ul>
+            <h3 style="margin-top:20px;">Finished Classes (Last Week)</h3>
+            <ul id="rev-fin-classes"></ul>
+        </div>
+        <div class="card">
+            <h3>Tasks to follow up</h3>
+            <ul id="rev-follow-tasks"></ul>
+        </div>
+        <div class="card">
+            <h3>Weekly Checklist</h3>
+            <ul>
+                <li><input type="checkbox"> （個人）檢查自己當週行程</li>
+                <li><input type="checkbox"> （個人）備妥兩星期內教材</li>
+                <li><input type="checkbox"> （導師管理）導師提示</li>
+                <li><input type="checkbox"> （導師管理）下兩星期教材安排</li>
+                <li><input type="checkbox"> （導師管理）檢查上星期導師進度表</li>
+            </ul>
+        </div>
+    </div>
+    <div class="row">
+        <div class="card">
+            <h3>Obstacles & Notes</h3>
+            <textarea placeholder="請在此輸入..."></textarea>
+        </div>
+    </div>
+
+    <h2 class="section-title">Preview (Plan and Prioritize)</h2>
+    <div class="row">
+        <div class="card" style="flex: 1.5;">
+            <h3>Time Prediction</h3>
+            <div class="time-grid" id="time-prediction-content">
                 </div>
-            </div>
         </div>
-
-        <div class="col-md-4 col-12">
-            <div class="card">
-                <div class="card-header bg-warning text-dark">Tasks to follow up</div>
-                <div class="card-body" id="followup-tasks">資料讀取中...</div>
-            </div>
-        </div>
-
-        <div class="col-md-4 col-12">
-            <div class="card">
-                <div class="card-header bg-info text-white">Weekly Checklist</div>
-                <div class="card-body">
-                    <div class="form-check"><input class="form-check-input" type="checkbox" id="chk1"><label class="form-check-label" for="chk1">（個人）檢查自己當週行程</label></div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox" id="chk2"><label class="form-check-label" for="chk2">（個人）備妥兩星期內教材</label></div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox" id="chk3"><label class="form-check-label" for="chk3">（導師管理）導師提示</label></div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox" id="chk4"><label class="form-check-label" for="chk4">（導師管理）下兩星期教材安排</label></div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox" id="chk5"><label class="form-check-label" for="chk5">（導師管理）檢查上星期導師進度表</label></div>
-                </div>
-            </div>
+        <div class="card" style="flex: 1;">
+            <h3>Classes in this week</h3>
+            <ul id="pre-classes"></ul>
         </div>
     </div>
-    
-    <div class="row mt-3">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">Obstacles & Notes</div>
-                <div class="card-body p-2"><textarea placeholder="請輸入內容..."></textarea></div>
-            </div>
+    <div class="row">
+        <div class="card">
+            <h3>To do list</h3>
+            <ul id="pre-todo-tasks"></ul>
+        </div>
+    </div>
+    <div class="row">
+        <div class="card">
+            <h3>Additional Notes</h3>
+            <textarea placeholder="請在此輸入..."></textarea>
         </div>
     </div>
 
-    <div class="section-title mt-4">Preview (Plan and Prioritize)</div>
-    <div class="row g-3">
-        <div class="col-md-6 col-12">
-            <div class="card">
-                <div class="card-header bg-primary text-white">Time Prediction (本週預測)</div>
-                <div class="card-body" id="time-prediction" style="font-size: 0.95rem; line-height: 1.8;">資料讀取中...</div>
-            </div>
-        </div>
-
-        <div class="col-md-6 col-12">
-            <div class="card">
-                <div class="card-header bg-secondary text-white">Classes in this week</div>
-                <div class="card-body" id="preview-classes">資料讀取中...</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row mt-3">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header bg-danger text-white">To do list</div>
-                <div class="card-body" id="todo-tasks">資料讀取中...</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row mt-3">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">Additional Notes</div>
-                <div class="card-body p-2"><textarea placeholder="請輸入內容..."></textarea></div>
-            </div>
-        </div>
-    </div>
+    <button class="btn-export" onclick="exportAndSavePDF()">匯出 PDF 至 Google Drive</button>
 </div>
-
-<div class="container mb-5">
-    <button class="btn btn-export" id="export-btn">匯出成 PDF (儲存至設備)</button>
-    <div class="text-center text-muted mt-2" style="font-size: 0.8rem;">* 註：請在匯出 PDF 後，手動上傳至 Google Drive Folder ID: 1S3lZvpwbd3fHJMvAxcZFjKmWPd7DYZHx</div>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.10/dayjs.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <script>
-    const hkHolidays2026 = ['2026-01-01','2026-02-17','2026-02-18','2026-02-19','2026-04-03','2026-04-04','2026-04-06','2026-04-07','2026-05-01','2026-05-25','2026-06-19','2026-07-01','2026-09-26','2026-10-01','2026-10-26','2026-12-25','2026-12-26'];
+// --- 資料來源 ---
+const TASK_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLnU0BMgl4AFXJuTVBtdmcCvuhDbv7TJxLHGK0BQZ9pJTOxdcLQ2QU1inCjXeZKJdc9v3-y4Kfk4aS/pub?output=csv';
+const CLASS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQFFF43IJhu4qgR8KiR_Oo9lwv7LkuTcjHzebpTvUd-SnnivG_5GwDT3-JzEncLTxKXbZuQ8LnU90n3/pub?output=csv';
 
-    let tasksData = [];
-    let classesData = [];
+// 2026年香港部分公眾假期(格式 yyyy-mm-dd)，可自行增補
+const HK_HOLIDAYS = ["2026-01-01", "2026-02-17", "2026-02-18", "2026-02-19", "2026-04-03", "2026-04-04", "2026-04-06", "2026-04-07", "2026-05-01", "2026-05-24", "2026-06-19", "2026-07-01", "2026-10-01", "2026-10-26", "2026-12-25", "2026-12-26"];
 
-    function initDates() {
-        document.getElementById('current-date-display').innerText = `今日日期：${dayjs().format('YYYY年MM月DD日')}`;
-        const weekSelect = document.getElementById('week-select');
-        let today = dayjs();
-        let currentSunday = today.day(0); 
-        
-        for (let i = -10; i <= 10; i++) {
-            let sunday = currentSunday.add(i, 'week');
-            let saturday = sunday.add(6, 'day');
-            let option = document.createElement('option');
-            option.value = sunday.format('YYYY-MM-DD');
-            option.text = `${sunday.format('YYYY/MM/DD')} - ${saturday.format('YYYY/MM/DD')}`;
-            if (i === 0) option.selected = true;
-            weekSelect.appendChild(option);
-        }
-    }
+let taskData = [];
+let classData = [];
 
-    function parseChineseDate(dateStr) {
-        if (!dateStr) return null;
-        const match = dateStr.match(/(\d+)年(\d+)月(\d+)日/);
-        if (match) {
-            return dayjs(`${match[1]}-${match[2]}-${match[3]}`);
-        }
-        return dayjs(dateStr); 
-    }
+// 初始化
+window.onload = async () => {
+    document.getElementById('today-date').innerText = new Date().toLocaleDateString('zh-HK');
+    initWeekSelect();
+    await loadData();
+    refreshData();
+};
 
-    function parseDuration(timeStr) {
-        if (!timeStr || !timeStr.includes('-')) return 0;
-        let [start, end] = timeStr.split('-');
-        let [sh, sm] = start.split(':').map(Number);
-        let [eh, em] = end.split(':').map(Number);
-        return (eh * 60 + em) - (sh * 60 + sm);
-    }
+function initWeekSelect() {
+    const select = document.getElementById('week-select');
+    let curr = new Date();
+    // 找出本週日
+    let first = curr.getDate() - curr.getDay(); 
+    let sunday = new Date(curr.setDate(first));
     
-    function calcAfterClassTime(timeStr) {
-        if (!timeStr || !timeStr.includes('-')) return 0;
-        let end = timeStr.split('-')[1];
-        let [eh, em] = end.split(':').map(Number);
-        let endMins = eh * 60 + em;
-        let limitMins = 18 * 60; 
-        return limitMins > endMins ? (limitMins - endMins) : 0;
-    }
-
-    function sortTasks(a, b) {
-        let aImp = (a[5] || '').toUpperCase() === 'YES' ? 1 : 0; 
-        let bImp = (b[5] || '').toUpperCase() === 'YES' ? 1 : 0;
-        let aUrg = (a[6] || '').toUpperCase() === 'YES' ? 1 : 0; 
-        let bUrg = (b[6] || '').toUpperCase() === 'YES' ? 1 : 0;
-        if (aImp !== bImp) return bImp - aImp;
-        return bUrg - aUrg;
-    }
-
-    async function loadData() {
-        // 加入時間戳記 (Cache-Busting)，強迫抓取最新資料
-        const timestamp = new Date().getTime();
-        const masterTaskUrl = `https://docs.google.com/spreadsheets/d/e/2PACX-1vSLnU0BMgl4AFXJuTVBtdmcCvuhDbv7TJxLHGK0BQZ9pJTOxdcLQ2QU1inCjXeZKJdc9v3-y4Kfk4aS/pub?output=csv&t=${timestamp}`;
-        const classUrl = `https://docs.google.com/spreadsheets/d/e/2PACX-1vQFFF43IJhu4qgR8KiR_Oo9lwv7LkuTcjHzebpTvUd-SnnivG_5GwDT3-JzEncLTxKXbZuQ8LnU90n3/pub?output=csv&t=${timestamp}`;
-
-        try {
-            const [taskRes, classRes] = await Promise.all([
-                fetch(masterTaskUrl).then(r => r.text()),
-                fetch(classUrl).then(r => r.text())
-            ]);
-
-            if (taskRes.trim().toLowerCase().startsWith('<!doctype') || classRes.trim().toLowerCase().startsWith('<!doctype')) {
-                throw new Error("Google 回傳了網頁而不是 CSV！請檢查 Google Sheet 內「發佈到網路」的格式是否為「逗號分隔值 (.csv)」");
-            }
-
-            tasksData = Papa.parse(taskRes, { header: false, skipEmptyLines: true }).data.slice(1);
-            classesData = Papa.parse(classRes, { header: false, skipEmptyLines: true }).data.slice(1);
-
-            renderUI();
-        } catch (error) {
-            console.error("載入失敗:", error);
-            alert(`讀取失敗！\n\n系統訊息：${error.message}\n\n如果您確定連結沒有問題，請嘗試使用「無痕視窗」開啟這個網頁。`);
-            document.querySelectorAll('#review-tasks, #review-classes, #followup-tasks, #todo-tasks, #preview-classes, #time-prediction').forEach(el => el.innerHTML = `<span class="text-danger">⚠️ 無法載入資料</span>`);
-        }
-    }
-
-    function renderUI() {
-        try {
-            const empName = document.getElementById('employee-select').value;
-            const selectedSundayStr = document.getElementById('week-select').value;
-            
-            const currentWeekStart = dayjs(selectedSundayStr);
-            const currentWeekEnd = currentWeekStart.add(6, 'day');
-            const prevWeekStart = currentWeekStart.subtract(1, 'week');
-            const prevWeekEnd = prevWeekStart.add(6, 'day');
-
-            // 1. Finished Tasks
-            let finishedTasks = tasksData.filter(row => {
-                if (!row || row.length < 8) return false;
-                let pics = (row[4] || '').split('/');
-                let isPic = pics.includes(empName);
-                let isFinished = (row[7] || '').trim().toUpperCase() === 'FINISHED';
-                let finishDate = parseChineseDate(row[10]);
-                let inPrevWeek = finishDate && finishDate.isValid() && finishDate.isAfter(prevWeekStart.subtract(1,'day')) && finishDate.isBefore(prevWeekEnd.add(1,'day'));
-                return isPic && isFinished && inPrevWeek;
-            }).sort(sortTasks);
-
-            document.getElementById('review-tasks').innerHTML = finishedTasks.length 
-                ? finishedTasks.map(t => `<div class="task-item">[${t[1] || '未分類'}]-${t[2] || '無名稱'}</div>`).join('') 
-                : '<div class="text-muted">無紀錄</div>';
-
-            // 2. Classes (上星期)
-            let prevClasses = classesData.filter(row => {
-                if (!row || row.length < 7) return false;
-                let isTutor = (row[6] || '').includes(empName);
-                let classDate = row[3] ? dayjs(row[3]) : null; 
-                let inPrevWeek = classDate && classDate.isValid() && classDate.isAfter(prevWeekStart.subtract(1,'day')) && classDate.isBefore(prevWeekEnd.add(1,'day'));
-                return isTutor && inPrevWeek;
-            });
-            
-            document.getElementById('review-classes').innerHTML = prevClasses.length 
-                ? prevClasses.map(c => `<div class="task-item">(${c[4] || ''})：${c[0] || ''}-${c[5] || ''}</div>`).join('')
-                : '<div class="text-muted">無紀錄</div>';
-
-            // 3. Tasks to follow up
-            let unfinishedTasks = tasksData.filter(row => {
-                if (!row || row.length < 8) return false;
-                let pics = (row[4] || '').split('/');
-                let isPic = pics.includes(empName);
-                let isFinished = (row[7] || '').trim().toUpperCase() === 'FINISHED';
-                return isPic && !isFinished;
-            }).sort(sortTasks);
-
-            let unfinHtml = unfinishedTasks.map(t => {
-                let deadline = parseChineseDate(t[9]);
-                let remainDays = (deadline && deadline.isValid()) ? deadline.diff(dayjs(), 'day') : 'N/A';
-                return `<div class="task-item">[${t[1] || ''}]-${t[2] || ''}-${t[7] || ''}-(餘 ${remainDays} 日)</div>`;
-            }).join('');
-            
-            document.getElementById('followup-tasks').innerHTML = unfinHtml || '<div class="text-muted">無未完成任務</div>';
-            document.getElementById('todo-tasks').innerHTML = unfinHtml || '<div class="text-muted">無未完成任務</div>';
-
-            // 4. Classes (本星期)
-            let currClasses = classesData.filter(row => {
-                if (!row || row.length < 7) return false;
-                let isTutor = (row[6] || '').includes(empName);
-                let classDate = row[3] ? dayjs(row[3]) : null;
-                let inCurrWeek = classDate && classDate.isValid() && classDate.isAfter(currentWeekStart.subtract(1,'day')) && classDate.isBefore(currentWeekEnd.add(1,'day'));
-                return isTutor && inCurrWeek;
-            });
-
-            document.getElementById('preview-classes').innerHTML = currClasses.length
-                ? currClasses.map(c => `<div class="task-item">(${c[4] || ''})：${c[0] || ''}-${c[5] || ''}</div>`).join('')
-                : '<div class="text-muted">無紀錄</div>';
-
-            // 5. Time Prediction 計算
-            let workDays = 0;
-            let holidayCount = 0;
-            for (let i = 1; i <= 5; i++) {
-                let d = currentWeekStart.add(i, 'day').format('YYYY-MM-DD');
-                if (hkHolidays2026.includes(d)) holidayCount++;
-                else workDays++;
-            }
-            
-            let totalHours = workDays * 9;
-            let lunchHours = workDays * 1;
-            let weekdayMins = 0;
-            let weekendMins = 0;
-            let weekdayClassDays = new Set();
-            let afterClassMinsTotal = 0;
-            let dailyLastClass = {};
-
-            currClasses.forEach(c => {
-                if(!c[3] || !c[5]) return; 
-                let cDate = dayjs(c[3]);
-                let dayOfWeek = cDate.day();
-                let duration = parseDuration(c[5]);
-                
-                if (dayOfWeek >= 1 && dayOfWeek <= 6) {
-                    weekdayMins += duration;
-                    if (dayOfWeek <= 5) weekdayClassDays.add(dayOfWeek); 
-                }
-                if (dayOfWeek === 6 || dayOfWeek === 0) weekendMins += duration;
-
-                let dateStr = cDate.format('YYYY-MM-DD');
-                let endStr = c[5].includes('-') ? c[5].split('-')[1] : null;
-                if (endStr) {
-                    if (!dailyLastClass[dateStr] || endStr > dailyLastClass[dateStr]) {
-                        dailyLastClass[dateStr] = endStr;
-                    }
-                }
-            });
-
-            for (let d in dailyLastClass) {
-                afterClassMinsTotal += calcAfterClassTime(`00:00-${dailyLastClass[d]}`);
-            }
-
-            let transportationHours = weekdayClassDays.size * 1;
-            let afterClassHours = (afterClassMinsTotal / 60).toFixed(1);
-            let weekdayHrs = (weekdayMins / 60).toFixed(1);
-            let actualWorkHours = (totalHours - weekdayHrs - transportationHours - lunchHours - afterClassHours).toFixed(1);
-            let teachingRatio = currClasses.length > 0 && workDays > 0 ? (currClasses.length / workDays).toFixed(2) : 0;
-
-            document.getElementById('time-prediction').innerHTML = `
-                <b>Total:</b> ${totalHours} 小時 (${workDays} 個工作日 x 9小時)<br>
-                <b>本週公眾假期:</b> ${holidayCount} 日<br>
-                <b>Weekday Teaching Hour:</b> ${weekdayHrs} 小時<br>
-                <b>Weekend Teaching Hour:</b> ${(weekendMins / 60).toFixed(1)} 小時<br>
-                <b>Transportation:</b> ${transportationHours} 小時<br>
-                <b>Lunch:</b> ${lunchHours} 小時<br>
-                <b>課後時間:</b> ${afterClassHours} 小時<br>
-                <b>實際可工作時數:</b> ${actualWorkHours} 小時<br>
-                <b>Teaching Ratio in this week:</b> ${currClasses.length}/${workDays} = ${teachingRatio}
-            `;
-        } catch (e) {
-            console.error("渲染錯誤: ", e);
-            document.getElementById('time-prediction').innerHTML = `<span class="text-danger">介面渲染時發生錯誤。</span>`;
-        }
-    }
-
-    document.getElementById('employee-select').addEventListener('change', renderUI);
-    document.getElementById('week-select').addEventListener('change', renderUI);
-
-    document.getElementById('export-btn').addEventListener('click', function() {
-        const element = document.getElementById('pdf-content');
-        const empName = document.getElementById('employee-select').value;
-        const weekSelect = document.getElementById('week-select');
-        const weekText = weekSelect.options[weekSelect.selectedIndex].text.replace(/ \/ /g, '').replace(/ - /g, '-');
+    // 生成前後數週選項
+    for(let i = -4; i <= 4; i++) {
+        let sDate = new Date(sunday);
+        sDate.setDate(sDate.getDate() + (i * 7));
+        let eDate = new Date(sDate);
+        eDate.setDate(eDate.getDate() + 6);
         
-        const fileName = `"Meeting form"- ${empName}-${weekText}.pdf`;
+        let optStr = `${sDate.toLocaleDateString()} - ${eDate.toLocaleDateString()}`;
+        let opt = document.createElement('option');
+        opt.value = sDate.toISOString(); // 記錄星期日
+        opt.text = optStr;
+        if(i === 0) opt.selected = true;
+        select.appendChild(opt);
+    }
+}
 
-        const opt = {
-            margin:       0.3,
-            filename:     fileName,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2 },
-            jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
-        };
-        html2pdf().set(opt).from(element).save();
+async function loadData() {
+    document.getElementById('loading').style.display = 'flex';
+    try {
+        const [taskRes, classRes] = await Promise.all([
+            fetch(TASK_URL).then(r => r.text()),
+            fetch(CLASS_URL).then(r => r.text())
+        ]);
+        taskData = Papa.parse(taskRes, {header: true, skipEmptyLines: true}).data;
+        classData = Papa.parse(classRes, {header: false, skipEmptyLines: true}).data; // 因不確定表頭有無空缺，改用array
+    } catch(e) {
+        alert("資料讀取失敗，請確保試算表已發佈至網路。");
+    }
+    document.getElementById('loading').style.display = 'none';
+}
+
+// 日期解析：支援「2026年2月4日」轉 Date Object
+function parseChineseDate(str) {
+    if(!str) return null;
+    let match = str.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+    if(match) return new Date(match[1], match[2]-1, match[3]);
+    let d = new Date(str);
+    return isNaN(d) ? null : d;
+}
+
+// 根據重要與緊急排序 (Important(F) -> Urgent(G))
+function sortTasks(a, b) {
+    let aImp = (a['Important'] || '').toUpperCase() === 'YES' ? 2 : 0;
+    let aUrg = (a['Urgent'] || '').toUpperCase() === 'YES' ? 1 : 0;
+    let bImp = (b['Important'] || '').toUpperCase() === 'YES' ? 2 : 0;
+    let bUrg = (b['Urgent'] || '').toUpperCase() === 'YES' ? 1 : 0;
+    return (bImp + bUrg) - (aImp + aUrg);
+}
+
+function refreshData() {
+    const person = document.getElementById('person-select').value;
+    const weekStart = new Date(document.getElementById('week-select').value);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    
+    const lastWeekStart = new Date(weekStart);
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+    const lastWeekEnd = new Date(lastWeekStart);
+    lastWeekEnd.setDate(lastWeekEnd.getDate() + 6);
+
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    // ====== Tasks 處理 ======
+    let lastWeekFinished = [];
+    let unfinishedTasks = [];
+
+    taskData.forEach(t => {
+        let pics = (t['PIC'] || '').split('/');
+        if(!pics.includes(person)) return;
+
+        let isFinished = (t['Progress'] || '').toUpperCase() === 'FINISHED';
+        
+        if(isFinished) {
+            let finDate = parseChineseDate(t['Finished Date']);
+            if(finDate && finDate >= lastWeekStart && finDate <= lastWeekEnd) {
+                lastWeekFinished.push(t);
+            }
+        } else {
+            unfinishedTasks.push(t);
+        }
     });
 
-    initDates();
-    loadData();
+    lastWeekFinished.sort(sortTasks);
+    unfinishedTasks.sort(sortTasks);
+
+    // 渲染 Left Card Tasks
+    document.getElementById('rev-fin-tasks').innerHTML = lastWeekFinished.map(t => 
+        `<li>[${t['Project']||''}] - ${t['Task']||''}</li>`
+    ).join('') || '<li>無</li>';
+
+    // 渲染 Middle / Bottom Tasks
+    let unfinHtml = unfinishedTasks.map(t => {
+        let dlDate = parseChineseDate(t['Deadline']);
+        let remain = dlDate ? Math.ceil((dlDate - today) / (1000 * 60 * 60 * 24)) : '?';
+        let badges = [];
+        if((t['Important']||'').toUpperCase() === 'YES') badges.push('<span class="important-badge">Important</span>');
+        if((t['Urgent']||'').toUpperCase() === 'YES') badges.push('<span class="urgent-badge">Urgent</span>');
+        return `<li>${badges.join(' ')} [${t['Project']||''}] - ${t['Task']||''} - ${t['Progress']||''} - (餘下 ${remain} 日)</li>`;
+    }).join('') || '<li>無</li>';
+    
+    document.getElementById('rev-follow-tasks').innerHTML = unfinHtml;
+    document.getElementById('pre-todo-tasks').innerHTML = unfinHtml;
+
+    // ====== Classes 處理 ======
+    let lastWeekClasses = [];
+    let thisWeekClasses = [];
+
+    // 課堂總匯 Col: 0=學校, 1=課程, 2=堂, 3=日期, 4=星期, 5=時間, 6=導師, 7=電話, 8=課程名稱 (假設索引)
+    classData.forEach((row, index) => {
+        if(index === 0) return; // skip header
+        if(row[6] !== person) return;
+
+        let cDate = parseChineseDate(row[3]);
+        if(!cDate) return;
+
+        let cData = { date: cDate, weekStr: row[4], a: row[0], f: row[5] };
+
+        if(cDate >= lastWeekStart && cDate <= lastWeekEnd) lastWeekClasses.push(cData);
+        if(cDate >= weekStart && cDate <= weekEnd) thisWeekClasses.push(cData);
+    });
+
+    // 排序 (按日期)
+    lastWeekClasses.sort((a,b) => a.date - b.date);
+    thisWeekClasses.sort((a,b) => a.date - b.date);
+
+    document.getElementById('rev-fin-classes').innerHTML = lastWeekClasses.map(c => 
+        `<li>(${c.weekStr})：${c.a} - ${c.f}</li>`
+    ).join('') || '<li>無</li>';
+
+    document.getElementById('pre-classes').innerHTML = thisWeekClasses.map(c => 
+        `<li>(${c.weekStr})：${c.a} - ${c.f}</li>`
+    ).join('') || '<li>無</li>';
+
+    // ====== Time Prediction 處理 ======
+    calculateTimePrediction(thisWeekClasses, weekStart);
+}
+
+function calculateTimePrediction(classes, wStart) {
+    let holidaysCount = 0;
+    let workdays = 0;
+    
+    // 計算工作日與假期 (星期一至五)
+    for(let i=1; i<=5; i++) {
+        let d = new Date(wStart);
+        d.setDate(d.getDate() + i);
+        let dStr = d.toISOString().split('T')[0];
+        if(HK_HOLIDAYS.includes(dStr)) {
+            holidaysCount++;
+        } else {
+            workdays++;
+        }
+    }
+
+    let totalWorkHours = workdays * 9;
+    
+    let weekdayTeach = 0; // Mon-Sat (1 to 6)
+    let weekendTeach = 0; // Sat-Sun (6 to 0)
+    let transport = 0;
+    let afterClassHours = 0;
+    let daysEndMap = {};
+
+    classes.forEach(c => {
+        let dayOfW = c.date.getDay();
+        // 時間處理 15:00-17:30
+        let times = c.f.split('-');
+        if(times.length === 2) {
+            let s = times[0].split(':'); let e = times[1].split(':');
+            let sNum = parseInt(s[0]) + parseInt(s[1])/60;
+            let eNum = parseInt(e[0]) + parseInt(e[1])/60;
+            let dur = eNum - sNum;
+
+            if(dayOfW >= 1 && dayOfW <= 6) weekdayTeach += dur; // 一至六
+            if(dayOfW === 6 || dayOfW === 0) weekendTeach += dur; // 六至日
+            
+            // 記錄當天最晚下課時間
+            let dStr = c.date.toISOString().split('T')[0];
+            if(!daysEndMap[dStr] || eNum > daysEndMap[dStr]) {
+                daysEndMap[dStr] = eNum;
+            }
+        }
+    });
+
+    // 計算課後時間 (如果下課早於 18:00)
+    for (let key in daysEndMap) {
+        if(daysEndMap[key] < 18) {
+            afterClassHours += (18 - daysEndMap[key]);
+        }
+    }
+
+    let monToFriClassesCount = classes.filter(c => c.date.getDay() >= 1 && c.date.getDay() <= 5).length;
+    transport = monToFriClassesCount * 1;
+    let lunch = workdays * 1;
+
+    let realWorkTime = totalWorkHours - weekdayTeach - transport - lunch - afterClassHours;
+    let ratio = workdays > 0 ? (classes.length / workdays).toFixed(2) : 0;
+
+    // 格式轉換 (小數轉小時分鐘)
+    function formatTime(num) {
+        if(num < 0) num = 0;
+        let h = Math.floor(num);
+        let m = Math.round((num - h) * 60);
+        return `${h}小時${m > 0 ? m+'分鐘' : ''}`;
+    }
+
+    let tpHTML = `
+        <div class="time-item">Total (工作日x9): <span>${totalWorkHours} 小時</span></div>
+        <div class="time-item">本星期假期: <span>${holidaysCount} 日</span></div>
+        <div class="time-item">Weekday Teaching Hour: <span>${formatTime(weekdayTeach)}</span></div>
+        <div class="time-item">Weekend Teaching Hour: <span>${formatTime(weekendTeach)}</span></div>
+        <div class="time-item">Transportation: <span>${transport} 小時</span></div>
+        <div class="time-item">Lunch: <span>${lunch} 小時</span></div>
+        <div class="time-item">課後時間: <span>${formatTime(afterClassHours)}</span></div>
+        <div class="time-item">實際可工作時數: <span>${formatTime(realWorkTime)}</span></div>
+        <div class="time-item" style="grid-column: span 2;">Teaching Ratio: <span>${classes.length} / ${workdays} (${ratio})</span></div>
+    `;
+    document.getElementById('time-prediction-content').innerHTML = tpHTML;
+}
+
+// 匯出並存入 Google Drive
+function exportAndSavePDF() {
+    const person = document.getElementById('person-select').value;
+    const weekSelectTxt = document.getElementById('week-select').options[document.getElementById('week-select').selectedIndex].text;
+    const filename = `"Meeting form"- ${person} - (${weekSelectTxt})`;
+
+    const element = document.getElementById('dashboard');
+    document.getElementById('loading').style.display = 'flex';
+    document.getElementById('loading').innerText = "生成PDF並上傳中，請稍候...";
+
+    // 隱藏匯出按鈕本身，以免印進 PDF
+    const btn = document.querySelector('.btn-export');
+    btn.style.display = 'none';
+
+    var opt = {
+        margin:       10,
+        filename:     filename + '.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(element).outputPdf('datauristring').then(function(pdfBase64) {
+        btn.style.display = 'block'; // 恢復按鈕
+        
+        // 呼叫 Google Apps Script 後端函式存入 Drive
+        if(typeof google !== 'undefined' && google.script) {
+            google.script.run
+                .withSuccessHandler(function(url) {
+                    document.getElementById('loading').style.display = 'none';
+                    alert('上傳成功！檔案已儲存至 Google Drive。');
+                    window.open(url, '_blank');
+                })
+                .withFailureHandler(function(err) {
+                    document.getElementById('loading').style.display = 'none';
+                    alert('上傳失敗: ' + err);
+                })
+                .savePDFToDrive(pdfBase64, filename);
+        } else {
+            // 如果不在 GAS 環境下（直接打開 html），則觸發本地下載測試
+            document.getElementById('loading').style.display = 'none';
+            html2pdf().set(opt).from(element).save();
+            alert("目前不在 Google Apps Script 環境中，已轉為本地下載 PDF。");
+        }
+    });
+}
 </script>
 </body>
 </html>
