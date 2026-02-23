@@ -10,7 +10,11 @@
     <style>
         @media print {
             .no-print { display: none !important; }
-            .page-break { page-break-before: always; }
+        }
+        /* 美化 textarea 確保列印時沒有邊框或捲軸問題 */
+        textarea {
+            resize: none;
+            overflow: hidden;
         }
     </style>
 </head>
@@ -29,6 +33,7 @@
                     <option value="Zoe">Zoe</option>
                     <option value="Ian">Ian</option>
                     <option value="Chris">Chris</option>
+                    <option value="Harry">Harry</option>
                 </select>
             </div>
         </div>
@@ -63,13 +68,14 @@
                 </div>
             </div>
 
-            <div class="bg-gray-50 p-4 rounded shadow-sm border mb-8 h-32">
+            <div class="bg-gray-50 p-4 rounded shadow-sm border mb-8 flex flex-col h-40">
                 <h3 class="font-bold text-gray-700 mb-2">Obstacles & Notes</h3>
-                </div>
+                <textarea class="w-full flex-grow p-2 border border-gray-200 rounded text-sm bg-white" placeholder="在此輸入筆記與遇到的障礙..."></textarea>
+            </div>
 
-            <div class="page-break"></div>
+            <div class="html2pdf__page-break"></div>
 
-            <h2 class="text-xl font-bold text-gray-700 border-b-2 border-blue-200 pb-1 mb-4">Preview (Plan and Prioritize)</h2>
+            <h2 class="text-xl font-bold text-gray-700 border-b-2 border-blue-200 pb-1 mb-4 pt-4">Preview (Plan and Prioritize)</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div class="bg-blue-50 p-4 rounded shadow-sm border border-blue-100">
                     <h3 class="font-bold text-blue-700 mb-2">Time Prediction</h3>
@@ -81,13 +87,13 @@
 
                 <div class="bg-white p-4 rounded shadow-sm border border-gray-200">
                     <h3 class="font-bold text-gray-700 mb-2">Priority Plans</h3>
-                    <div class="h-32 border-b border-dashed border-gray-300 mt-4"></div>
-                    <div class="h-10 border-b border-dashed border-gray-300"></div>
+                    <textarea class="w-full h-32 mt-2 p-2 border border-dashed border-gray-300 rounded text-sm" placeholder="在此輸入優先計畫..."></textarea>
                 </div>
             </div>
             
-            <div class="bg-white p-4 rounded shadow-sm border border-gray-200 h-32 mb-4">
+            <div class="bg-white p-4 rounded shadow-sm border border-gray-200 h-40 mb-4 flex flex-col">
                 <h3 class="font-bold text-gray-700 mb-2">Additional Notes / Preview</h3>
+                <textarea class="w-full flex-grow p-2 border border-gray-200 rounded text-sm bg-gray-50" placeholder="在此輸入其他補充事項..."></textarea>
             </div>
         </div>
     </div>
@@ -99,27 +105,24 @@
     </div>
 
     <script>
-        // 資料來源 URL
         const MASTER_TASK_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLnU0BMgl4AFXJuTVBtdmcCvuhDbv7TJxLHGK0BQZ9pJTOxdcLQ2QU1inCjXeZKJdc9v3-y4Kfk4aS/pub?output=csv';
         const CLASSES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQFFF43IJhu4qgR8KiR_Oo9lwv7LkuTcjHzebpTvUd-SnnivG_5GwDT3-JzEncLTxKXbZuQ8LnU90n3/pub?output=csv'; 
         
-        // 替換為您的 Google Apps Script Web App URL
+        // 您的 Google Apps Script Web App URL
         const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxVU4pjBeQCbOD616uDR5nhvFKDONEq035tqDpujLZZ0pEuJRabG2h2kDJNB0fKxmw6mQ/exec';
 
         let masterTasks = [];
         let classesData = [];
 
-        // 初始化日期與下拉選單
         document.getElementById('currentDateDisplay').textContent = `今日日期：${new Date().toLocaleDateString('zh-HK')}`;
         
         function populateWeekSelect() {
             const select = document.getElementById('weekSelect');
             let today = new Date();
-            let currentDay = today.getDay(); // 0 is Sunday
+            let currentDay = today.getDay(); 
             let currentSunday = new Date(today);
             currentSunday.setDate(today.getDate() - currentDay);
             
-            // 產生前2週到後4週的選項
             for (let i = -2; i <= 4; i++) {
                 let d = new Date(currentSunday);
                 d.setDate(d.getDate() + (i * 7));
@@ -128,7 +131,6 @@
                 
                 let option = document.createElement('option');
                 option.value = d.toISOString();
-                // 格式化日期，並補零讓視覺更整齊
                 let startStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                 let endStr = `${end.getFullYear()}-${String(end.getMonth()+1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
                 
@@ -138,17 +140,15 @@
             }
         }
 
-        // 中文日期轉換為 Date 對象 (例如 "2026年2月4日")
         function parseChineseDate(dateStr) {
             if (!dateStr) return null;
             let match = dateStr.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
             if (match) {
                 return new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
             }
-            return new Date(dateStr); // Fallback
+            return new Date(dateStr); 
         }
 
-        // 判斷日期是否在某週內 (sunDate 是該週星期日)
         function isDateInWeek(dateObj, sunDate) {
             if (!dateObj || !sunDate) return false;
             let satDate = new Date(sunDate);
@@ -157,7 +157,6 @@
             return dateObj >= sunDate && dateObj <= satDate;
         }
 
-        // 計算時間差 (例如 15:00-17:30 轉為小時數)
         function calculateHours(timeStr) {
             if (!timeStr) return 0;
             let parts = timeStr.split('-');
@@ -169,7 +168,6 @@
             return (endMin - startMin) / 60;
         }
 
-        // 計算課後時間 (減去18:00)
         function calculateAfterClassHours(timeStr) {
             if (!timeStr) return 0;
             let parts = timeStr.split('-');
@@ -183,7 +181,6 @@
             return 0;
         }
 
-        // 載入與解析 CSV
         async function loadData() {
             document.getElementById('loadingIndicator').style.display = 'block';
             document.getElementById('mainContent').style.display = 'none';
@@ -196,7 +193,7 @@
 
                 Papa.parse(taskRes, {
                     header: false, skipEmptyLines: true,
-                    complete: function(results) { masterTasks = results.data.slice(1); } // 略過標題
+                    complete: function(results) { masterTasks = results.data.slice(1); }
                 });
 
                 Papa.parse(classRes, {
@@ -212,13 +209,13 @@
         }
 
         function sortTasks(tasks) {
-            // E列[4] Important, F列[5] Urgent. YES優先
+            // E行[4]=PIC, F行[5]=Important, G行[6]=Urgent
             return tasks.sort((a, b) => {
-                let aImp = a[4] === 'YES' ? 1 : 0;
-                let bImp = b[4] === 'YES' ? 1 : 0;
+                let aImp = a[5] === 'YES' ? 1 : 0;
+                let bImp = b[5] === 'YES' ? 1 : 0;
                 if (aImp !== bImp) return bImp - aImp;
-                let aUrg = a[5] === 'YES' ? 1 : 0;
-                let bUrg = b[5] === 'YES' ? 1 : 0;
+                let aUrg = a[6] === 'YES' ? 1 : 0;
+                let bUrg = b[6] === 'YES' ? 1 : 0;
                 return bUrg - aUrg;
             });
         }
@@ -230,34 +227,38 @@
             const lastSunday = new Date(selectedSunday);
             lastSunday.setDate(lastSunday.getDate() - 7);
 
-            // 過濾任務
-            let userTasks = masterTasks.filter(row => row[3] && row[3].includes(selectedName));
+            // 更新後的陣列索引：
+            // [0]Aspect, [1]Project, [2]Task, [3]發起人, [4]PIC, [5]Important, [6]Urgent, [7]Progress, [8]Establish Date, [9]Deadline, [10]Finished Date
             
-            // Finished Tasks (上星期完成)
-            let finishedTasks = userTasks.filter(row => row[6] === 'Finished' && isDateInWeek(parseChineseDate(row[9]), lastSunday));
+            // 過濾負責人為所選員工的任務
+            let userTasks = masterTasks.filter(row => row[4] && row[4].includes(selectedName));
+            
+            // Finished Tasks (上週完成) - 判斷進度[7]與完成日期[10]
+            let finishedTasks = userTasks.filter(row => row[7] === 'Finished' && isDateInWeek(parseChineseDate(row[10]), lastSunday));
             finishedTasks = sortTasks(finishedTasks);
             
             const finishedTasksList = document.getElementById('finishedTasksList');
             finishedTasksList.innerHTML = '';
             if(finishedTasks.length === 0) finishedTasksList.innerHTML = '<li class="text-gray-400">無紀錄</li>';
             finishedTasks.forEach(task => {
-                let tag = (task[4]==='YES' ? '<span class="text-red-500 font-bold">[!]</span> ' : '');
-                finishedTasksList.innerHTML += `<li>${tag}${task[1]}</li>`;
+                let tag = (task[5]==='YES' ? '<span class="text-red-500 font-bold">[!]</span> ' : '');
+                // 顯示 Task (C行，索引2)
+                finishedTasksList.innerHTML += `<li>${tag}${task[2]}</li>`;
             });
 
             // Tasks to follow up (尚未完成)
-            let followUpTasks = userTasks.filter(row => row[6] !== 'Finished');
+            let followUpTasks = userTasks.filter(row => row[7] !== 'Finished');
             followUpTasks = sortTasks(followUpTasks);
             
             const followUpList = document.getElementById('followUpTasksList');
             followUpList.innerHTML = '';
             if(followUpTasks.length === 0) followUpList.innerHTML = '<li class="text-gray-400">無紀錄</li>';
             followUpTasks.forEach(task => {
-                let tag = (task[4]==='YES' ? '<span class="text-red-500 font-bold">[!]</span> ' : '');
-                followUpList.innerHTML += `<li>${tag}${task[1]} <span class="text-xs text-gray-500">(${task[6] || 'N/A'})</span></li>`;
+                let tag = (task[5]==='YES' ? '<span class="text-red-500 font-bold">[!]</span> ' : '');
+                followUpList.innerHTML += `<li>${tag}${task[2]} <span class="text-xs text-gray-500">(${task[7] || 'N/A'})</span></li>`;
             });
 
-            // 上星期完成課堂 (課堂總匯: G行[6]導師, D行[3]日期)
+            // 上星期完成課堂
             let lastWeekClasses = classesData.filter(row => row[6] === selectedName && isDateInWeek(parseChineseDate(row[3]), lastSunday));
             lastWeekClasses.sort((a, b) => parseChineseDate(a[3]) - parseChineseDate(b[3]));
             const classesList = document.getElementById('completedClassesList');
@@ -267,12 +268,11 @@
                 classesList.innerHTML += `<li>${cls[4] || ''} - ${cls[8] || cls[9] || '課堂'} (${cls[5]})</li>`;
             });
 
-            // === Preview 計算邏輯 ===
-            // 找出這星期的課堂
+            // Preview 計算邏輯
             let thisWeekClasses = classesData.filter(row => row[6] === selectedName && isDateInWeek(parseChineseDate(row[3]), selectedSunday));
             
-            let publicHolidays = 0; // 簡化：這裡假設手動輸入或預設為0，如需串接可擴充
-            let workDays = 5 - publicHolidays; // 預設星期一至五為工作日
+            let publicHolidays = 0; 
+            let workDays = 5 - publicHolidays; 
             let totalHours = workDays * 9;
             
             let weekdayTeachingH = 0;
@@ -291,7 +291,7 @@
                 if (isWeekend) weekendTeachingH += hours;
                 else {
                     weekdayTeachingH += hours;
-                    classDaysCount.add(cls[3]); // 記錄有上課的工作日
+                    classDaysCount.add(cls[3]); 
                     afterClassHours += calculateAfterClassHours(cls[5]);
                 }
             });
@@ -299,9 +299,11 @@
             let transH = classDaysCount.size * 1; 
             let lunchH = workDays * 1;
             let actualWorkH = totalHours - weekdayTeachingH - transH - lunchH - afterClassHours;
-            let teachingRatio = totalClasses > 0 ? `${totalClasses} / ${workDays}` : `0 / ${workDays}`;
+            
+            // 計算 Teaching Ratio 及實數
+            let ratioDecimal = workDays > 0 ? (totalClasses / workDays).toFixed(2) : 0;
+            let teachingRatio = totalClasses > 0 ? `${totalClasses} / ${workDays} (${ratioDecimal})` : `0 / ${workDays} (0)`;
 
-            // 轉為 x小時x分 的格式函數
             const formatHr = (hr) => {
                 let h = Math.floor(hr);
                 let m = Math.round((hr - h) * 60);
@@ -326,49 +328,51 @@
             document.getElementById('mainContent').style.display = 'block';
         }
 
-        // 綁定事件
         document.getElementById('weekSelect').addEventListener('change', updateDashboard);
         document.getElementById('nameSelect').addEventListener('change', updateDashboard);
 
-        // 初始化
         populateWeekSelect();
         loadData();
 
-        // PDF 匯出與上傳
         document.getElementById('exportBtn').addEventListener('click', async () => {
             const btn = document.getElementById('exportBtn');
             btn.innerText = "正在產生 PDF 並上傳...";
             btn.disabled = true;
             btn.classList.replace('bg-green-600', 'bg-gray-400');
 
+            // 確保網頁滑動到最頂部，避免 html2canvas 擷取到上方的空白
+            window.scrollTo(0, 0);
+
+            // 修復 html2canvas 無法擷取 textarea 最新輸入值的小技巧
+            const textareas = document.querySelectorAll('textarea');
+            textareas.forEach(ta => {
+                ta.innerHTML = ta.value; 
+            });
+
             const element = document.getElementById('contentToPrint');
             const name = document.getElementById('nameSelect').value;
             const dateText = document.getElementById('weekSelect').options[document.getElementById('weekSelect').selectedIndex].text;
-            // 取出 "2026-02-01 - 2026-02-07"
             const dateStr = dateText.replace('星期: ', '').replace(/\s/g, ''); 
             const filename = `"Meeting form"- ${name}-${dateStr}.pdf`;
 
             const opt = {
-                margin:       0.5,
+                margin:       0.3,
                 filename:     filename,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2 },
-                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+                html2canvas:  { scale: 2, scrollY: 0 }, // scrollY: 0 是消除頂部空白的關鍵
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
+                pagebreak:    { mode: ['css', 'legacy'] } // 確保支援 css 的 page-break
             };
 
             try {
-                // 生成 PDF Blob
                 const pdfWorker = html2pdf().set(opt).from(element);
                 const pdfBlob = await pdfWorker.output('blob');
 
-                // 將 Blob 轉為 Base64 以供 GAS 接收
                 const reader = new FileReader();
                 reader.readAsDataURL(pdfBlob);
                 reader.onloadend = async function() {
                     const base64data = reader.result.split(',')[1];
-                    
                     try {
-                        // 發送 POST 請求至 GAS
                         await fetch(GAS_WEBAPP_URL, {
                             method: 'POST',
                             body: JSON.stringify({
@@ -379,12 +383,9 @@
                         });
                         alert("匯出並上傳成功！您可以到 Google Drive 資料夾查看 PDF。");
                     } catch (uploadError) {
-                        // GAS有時會因CORS發生TypeError，但其實檔案已經傳成功，這裡做個防呆
                         console.log("上傳過程有警告，但通常已成功:", uploadError);
                         alert("上傳請求已發出，請檢查您的 Google Drive 資料夾是否出現 PDF。");
                     }
-
-                    // 恢復按鈕狀態
                     btn.innerText = "匯出為 PDF 並上傳至 Google Drive";
                     btn.disabled = false;
                     btn.classList.replace('bg-gray-400', 'bg-green-600');
