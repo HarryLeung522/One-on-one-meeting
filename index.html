@@ -140,6 +140,7 @@
 <script>
     const hkHolidays2026 = ['2026-01-01','2026-02-17','2026-02-18','2026-02-19','2026-04-03','2026-04-04','2026-04-06','2026-04-07','2026-05-01','2026-05-25','2026-06-19','2026-07-01','2026-09-26','2026-10-01','2026-10-26','2026-12-25','2026-12-26'];
 
+    // 確保這裡的網址是 Google Sheet 發佈為 CSV 的格式
     const masterTaskUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLnU0BMgl4AFXJuTVBtdmcCvuhDbv7TJxLHGK0BQZ9pJTOxdcLQ2QU1inCjXeZKJdc9v3-y4Kfk4aS/pub?output=csv';
     const classUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQFFF43IJhu4qgR8KiR_Oo9lwv7LkuTcjHzebpTvUd-SnnivG_5GwDT3-JzEncLTxKXbZuQ8LnU90n3/pub?output=csv';
 
@@ -204,28 +205,30 @@
         return bUrg - aUrg;
     }
 
-    // 載入資料 (增加錯誤防護)
+    // 載入資料 (強化錯誤防護與 HTML 偵測)
     async function loadData() {
         try {
             const [taskRes, classRes] = await Promise.all([
-                fetch(masterTaskUrl).then(r => {
-                    if (!r.ok) throw new Error("Master Task List 無法讀取");
-                    return r.text();
-                }),
-                fetch(classUrl).then(r => {
-                    if (!r.ok) throw new Error("課堂總匯無法讀取");
-                    return r.text();
-                })
+                fetch(masterTaskUrl).then(r => r.text()),
+                fetch(classUrl).then(r => r.text())
             ]);
+
+            // 檢查是否回傳了 HTML 網頁 (代表發佈格式設定錯誤)
+            if (taskRes.trim().toLowerCase().startsWith('<!doctype') || taskRes.trim().toLowerCase().startsWith('<html')) {
+                throw new Error("「Master Task List」的發佈格式錯誤，請在 Google Sheet 內重新發佈為 CSV 格式。");
+            }
+            if (classRes.trim().toLowerCase().startsWith('<!doctype') || classRes.trim().toLowerCase().startsWith('<html')) {
+                throw new Error("「課堂總匯」的發佈格式錯誤，請在 Google Sheet 內重新發佈為 CSV 格式。");
+            }
 
             tasksData = Papa.parse(taskRes, { header: false, skipEmptyLines: true }).data.slice(1);
             classesData = Papa.parse(classRes, { header: false, skipEmptyLines: true }).data.slice(1);
 
             renderUI();
         } catch (error) {
-            console.error(error);
-            alert(`無法連接到 Google Sheet！\n錯誤訊息: ${error.message}\n請確認 Google Sheet 是否已設定為「發佈到網路」。`);
-            document.querySelectorAll('#review-tasks, #review-classes, #followup-tasks, #todo-tasks, #preview-classes, #time-prediction').forEach(el => el.innerHTML = `<span class="text-danger">無法載入資料</span>`);
+            console.error("資料載入失敗:", error);
+            alert(`載入資料失敗！\n錯誤訊息：${error.message}`);
+            document.querySelectorAll('#review-tasks, #review-classes, #followup-tasks, #todo-tasks, #preview-classes, #time-prediction').forEach(el => el.innerHTML = `<span class="text-danger">⚠️ ${error.message}</span>`);
         }
     }
 
@@ -240,8 +243,9 @@
             const prevWeekStart = currentWeekStart.subtract(1, 'week');
             const prevWeekEnd = prevWeekStart.add(6, 'day');
 
-            // 1. Finished Tasks
+            // 1. Finished Tasks (加強陣列長度防呆)
             let finishedTasks = tasksData.filter(row => {
+                if (!row || row.length < 8) return false;
                 let pics = (row[4] || '').split('/');
                 let isPic = pics.includes(empName);
                 let isFinished = (row[7] || '').trim().toUpperCase() === 'FINISHED';
@@ -251,23 +255,25 @@
             }).sort(sortTasks);
 
             document.getElementById('review-tasks').innerHTML = finishedTasks.length 
-                ? finishedTasks.map(t => `<div class="task-item">[${t[1]}]-${t[2]}</div>`).join('') 
+                ? finishedTasks.map(t => `<div class="task-item">[${t[1] || '未分類'}]-${t[2] || '無名稱'}</div>`).join('') 
                 : '<div class="text-muted">無紀錄</div>';
 
             // 2. Classes (上星期)
             let prevClasses = classesData.filter(row => {
+                if (!row || row.length < 7) return false;
                 let isTutor = (row[6] || '').includes(empName);
-                let classDate = dayjs(row[3]); 
-                let inPrevWeek = classDate.isValid() && classDate.isAfter(prevWeekStart.subtract(1,'day')) && classDate.isBefore(prevWeekEnd.add(1,'day'));
+                let classDate = row[3] ? dayjs(row[3]) : null; 
+                let inPrevWeek = classDate && classDate.isValid() && classDate.isAfter(prevWeekStart.subtract(1,'day')) && classDate.isBefore(prevWeekEnd.add(1,'day'));
                 return isTutor && inPrevWeek;
             });
             
             document.getElementById('review-classes').innerHTML = prevClasses.length 
-                ? prevClasses.map(c => `<div class="task-item">(${c[4]})：${c[0]}-${c[5]}</div>`).join('')
+                ? prevClasses.map(c => `<div class="task-item">(${c[4] || ''})：${c[0] || ''}-${c[5] || ''}</div>`).join('')
                 : '<div class="text-muted">無紀錄</div>';
 
             // 3. Follow up / To do Tasks (未完成)
             let unfinishedTasks = tasksData.filter(row => {
+                if (!row || row.length < 8) return false;
                 let pics = (row[4] || '').split('/');
                 let isPic = pics.includes(empName);
                 let isFinished = (row[7] || '').trim().toUpperCase() === 'FINISHED';
@@ -275,9 +281,9 @@
             }).sort(sortTasks);
 
             let unfinHtml = unfinishedTasks.map(t => {
-                let deadline = parseChineseDate(t[9]); // 修復了這裡的 Bug
+                let deadline = parseChineseDate(t[9]);
                 let remainDays = (deadline && deadline.isValid()) ? deadline.diff(dayjs(), 'day') : 'N/A';
-                return `<div class="task-item">[${t[1]}]-${t[2]}-${t[7]}-(餘 ${remainDays} 日)</div>`;
+                return `<div class="task-item">[${t[1] || ''}]-${t[2] || ''}-${t[7] || ''}-(餘 ${remainDays} 日)</div>`;
             }).join('');
             
             document.getElementById('followup-tasks').innerHTML = unfinHtml || '<div class="text-muted">無未完成任務</div>';
@@ -285,14 +291,15 @@
 
             // 4. Classes (本星期)
             let currClasses = classesData.filter(row => {
+                if (!row || row.length < 7) return false;
                 let isTutor = (row[6] || '').includes(empName);
-                let classDate = dayjs(row[3]);
-                let inCurrWeek = classDate.isValid() && classDate.isAfter(currentWeekStart.subtract(1,'day')) && classDate.isBefore(currentWeekEnd.add(1,'day'));
+                let classDate = row[3] ? dayjs(row[3]) : null;
+                let inCurrWeek = classDate && classDate.isValid() && classDate.isAfter(currentWeekStart.subtract(1,'day')) && classDate.isBefore(currentWeekEnd.add(1,'day'));
                 return isTutor && inCurrWeek;
             });
 
             document.getElementById('preview-classes').innerHTML = currClasses.length
-                ? currClasses.map(c => `<div class="task-item">(${c[4]})：${c[0]}-${c[5]}</div>`).join('')
+                ? currClasses.map(c => `<div class="task-item">(${c[4] || ''})：${c[0] || ''}-${c[5] || ''}</div>`).join('')
                 : '<div class="text-muted">無紀錄</div>';
 
             // 5. Time Prediction 計算
@@ -313,6 +320,7 @@
             let dailyLastClass = {};
 
             currClasses.forEach(c => {
+                if(!c[3] || !c[5]) return; // 略過沒有日期或時間的課堂
                 let cDate = dayjs(c[3]);
                 let dayOfWeek = cDate.day();
                 let duration = parseDuration(c[5]);
@@ -324,7 +332,7 @@
                 if (dayOfWeek === 6 || dayOfWeek === 0) weekendMins += duration;
 
                 let dateStr = cDate.format('YYYY-MM-DD');
-                let endStr = c[5] ? c[5].split('-')[1] : null;
+                let endStr = c[5].includes('-') ? c[5].split('-')[1] : null;
                 if (endStr) {
                     if (!dailyLastClass[dateStr] || endStr > dailyLastClass[dateStr]) {
                         dailyLastClass[dateStr] = endStr;
@@ -355,6 +363,7 @@
             `;
         } catch (e) {
             console.error("UI渲染發生錯誤: ", e);
+            document.getElementById('time-prediction').innerHTML = `<span class="text-danger">介面渲染時發生錯誤，請檢查資料格式是否正確。</span>`;
         }
     }
 
