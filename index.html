@@ -263,9 +263,12 @@
             followUpTasks.forEach(task => {
                 let tag = (task[4] === 'YES' ? '<span class="text-red-500 font-bold">[!]</span> ' : '');
                 
-                let bCol = task[1] || '無'; // B行 Project
+                let bCol = task[1] || ''; // B行 Project
                 let cCol = task[2] || '無'; // C行 Task
                 let hCol = task[7] || '';   // H行 內容 (可能是備註/細節)
+                
+                // 如果 Project 是 'No' 或空的，就不顯示 Project 標籤
+                let projectText = (bCol && bCol.trim().toUpperCase() !== 'NO') ? `[${bCol}] - ` : '';
                 
                 // 計算距離 Deadline 的餘下日數 (假設 Deadline 落在 I行 index 8，若非則找 J行 index 9)
                 let deadlineDate = parseChineseDate(task[8]) || parseChineseDate(task[9]);
@@ -279,14 +282,15 @@
                     } else if (diffDays === 0) {
                         daysText = `今日到期`;
                     } else {
-                        daysText = `已過期 ${Math.abs(diffDays)} 日`;
+                        // 移除「過期多少日」的顯示，只顯示「已過期」
+                        daysText = `已過期`;
                     }
                 }
 
                 let extraInfo = hCol ? ` - ${hCol}` : '';
                 
-                // 輸出格式：[B行] - C行 - H行 -（距離Deadline的餘下日數）
-                followUpList.innerHTML += `<li class="leading-tight">${tag}[${bCol}] - ${cCol}${extraInfo} - <span class="text-xs text-blue-600 font-bold">(${daysText})</span></li>`;
+                // 輸出格式：(有Project時顯示[B行] - ) C行 - H行 -（距離Deadline的餘下日數）
+                followUpList.innerHTML += `<li class="leading-tight">${tag}${projectText}${cCol}${extraInfo} - <span class="text-xs text-blue-600 font-bold">(${daysText})</span></li>`;
             });
 
             const weekdaysMap = ['日', '一', '二', '三', '四', '五', '六'];
