@@ -53,7 +53,7 @@
 
                 <div class="bg-red-50 p-4 rounded shadow-sm border border-red-100">
                     <h3 class="font-bold text-red-700 mb-2">Tasks to Follow Up</h3>
-                    <ul id="followUpTasksList" class="text-sm list-disc pl-4 space-y-1 text-gray-700"></ul>
+                    <ul id="followUpTasksList" class="text-sm list-disc pl-4 space-y-2 text-gray-700"></ul>
                 </div>
 
                 <div class="bg-yellow-50 p-4 rounded shadow-sm border border-yellow-100">
@@ -209,14 +209,14 @@
         }
 
         function sortTasks(tasks) {
-            // E行[4]=PIC, F行[5]=Important, G行[6]=Urgent
+            // E行[4]=Important, F行[5]=Urgent
             return tasks.sort((a, b) => {
-                let aImp = a[5] === 'YES' ? 1 : 0;
-                let bImp = b[5] === 'YES' ? 1 : 0;
-                if (aImp !== bImp) return bImp - aImp;
-                let aUrg = a[6] === 'YES' ? 1 : 0;
-                let bUrg = b[6] === 'YES' ? 1 : 0;
-                return bUrg - aUrg;
+                let aImp = a[4] === 'YES' ? 1 : 0;
+                let bImp = b[4] === 'YES' ? 1 : 0;
+                if (aImp !== bImp) return bImp - aImp; // 優先 Important
+                let aUrg = a[5] === 'YES' ? 1 : 0;
+                let bUrg = b[5] === 'YES' ? 1 : 0;
+                return bUrg - aUrg; // 次要 Urgent
             });
         }
 
@@ -227,40 +227,70 @@
             const lastSunday = new Date(selectedSunday);
             lastSunday.setDate(lastSunday.getDate() - 7);
 
-            // 更新後的陣列索引：
-            // [0]Aspect, [1]Project, [2]Task, [3]發起人, [4]PIC, [5]Important, [6]Urgent, [7]Progress, [8]Establish Date, [9]Deadline, [10]Finished Date
+            // 更新過濾邏輯：為了防止欄位稍微偏移，負責人(PIC)兼容 index 3 與 4
+            let userTasks = masterTasks.filter(row => 
+                (row[3] && row[3].includes(selectedName)) || 
+                (row[4] && row[4].includes(selectedName))
+            );
             
-            // 過濾負責人為所選員工的任務
-            let userTasks = masterTasks.filter(row => row[4] && row[4].includes(selectedName));
-            
-            // Finished Tasks (上週完成) - 判斷進度[7]與完成日期[10]
-            let finishedTasks = userTasks.filter(row => row[7] === 'Finished' && isDateInWeek(parseChineseDate(row[10]), lastSunday));
+            // Finished Tasks (上週完成) - 兼容判斷 G行(6) 或原先的 H行(7) 是否為 Finished
+            let finishedTasks = userTasks.filter(row => 
+                (row[6] === 'Finished' || row[7] === 'Finished') && 
+                isDateInWeek(parseChineseDate(row[9]) || parseChineseDate(row[10]), lastSunday)
+            );
             finishedTasks = sortTasks(finishedTasks);
             
             const finishedTasksList = document.getElementById('finishedTasksList');
             finishedTasksList.innerHTML = '';
             if(finishedTasks.length === 0) finishedTasksList.innerHTML = '<li class="text-gray-400">無紀錄</li>';
             finishedTasks.forEach(task => {
-                let tag = (task[5]==='YES' ? '<span class="text-red-500 font-bold">[!]</span> ' : '');
-                // 顯示 Task (C行，索引2)
+                let tag = (task[4] === 'YES' ? '<span class="text-red-500 font-bold">[!]</span> ' : '');
                 finishedTasksList.innerHTML += `<li>${tag}${task[2]}</li>`;
             });
 
-            // Tasks to follow up (尚未完成)
-            let followUpTasks = userTasks.filter(row => row[7] !== 'Finished');
+            // ===== 中間咭片: Tasks to follow up =====
+            // 找出 G行(index 6) 不是 Finished 的項目
+            let followUpTasks = userTasks.filter(row => row[6] !== 'Finished' && row[6] !== '完成');
             followUpTasks = sortTasks(followUpTasks);
             
             const followUpList = document.getElementById('followUpTasksList');
             followUpList.innerHTML = '';
             if(followUpTasks.length === 0) followUpList.innerHTML = '<li class="text-gray-400">無紀錄</li>';
+            
+            let today = new Date();
+            today.setHours(0, 0, 0, 0);
+
             followUpTasks.forEach(task => {
-                let tag = (task[5]==='YES' ? '<span class="text-red-500 font-bold">[!]</span> ' : '');
-                followUpList.innerHTML += `<li>${tag}${task[2]} <span class="text-xs text-gray-500">(${task[7] || 'N/A'})</span></li>`;
+                let tag = (task[4] === 'YES' ? '<span class="text-red-500 font-bold">[!]</span> ' : '');
+                
+                let bCol = task[1] || '無'; // B行 Project
+                let cCol = task[2] || '無'; // C行 Task
+                let hCol = task[7] || '';   // H行 內容 (可能是備註/細節)
+                
+                // 計算距離 Deadline 的餘下日數 (假設 Deadline 落在 I行 index 8，若非則找 J行 index 9)
+                let deadlineDate = parseChineseDate(task[8]) || parseChineseDate(task[9]);
+                let daysText = "無期限";
+                
+                if (deadlineDate) {
+                    let diffTime = deadlineDate.getTime() - today.getTime();
+                    let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    if (diffDays > 0) {
+                        daysText = `餘 ${diffDays} 日`;
+                    } else if (diffDays === 0) {
+                        daysText = `今日到期`;
+                    } else {
+                        daysText = `已過期 ${Math.abs(diffDays)} 日`;
+                    }
+                }
+
+                let extraInfo = hCol ? ` - ${hCol}` : '';
+                
+                // 輸出格式：[B行] - C行 - H行 -（距離Deadline的餘下日數）
+                followUpList.innerHTML += `<li class="leading-tight">${tag}[${bCol}] - ${cCol}${extraInfo} - <span class="text-xs text-blue-600 font-bold">(${daysText})</span></li>`;
             });
 
             // 上星期完成課堂
             let lastWeekClasses = classesData.filter(row => row[6] === selectedName && isDateInWeek(parseChineseDate(row[3]), lastSunday));
-            // 按照日期排序（自然等同於按星期順序排列）
             lastWeekClasses.sort((a, b) => parseChineseDate(a[3]) - parseChineseDate(b[3]));
             
             const classesList = document.getElementById('completedClassesList');
@@ -271,8 +301,6 @@
             lastWeekClasses.forEach(cls => {
                 let dateObj = parseChineseDate(cls[3]);
                 let weekdayStr = dateObj ? `星期${weekdaysMap[dateObj.getDay()]}` : '未知';
-                
-                // 依要求更新格式：（星期）：（A行索引0）-（F行索引5）
                 classesList.innerHTML += `<li>${weekdayStr}：${cls[0] || ''} - ${cls[5] || ''}</li>`;
             });
 
