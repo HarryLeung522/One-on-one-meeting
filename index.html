@@ -1,163 +1,397 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard 更新</title>
-<style>
-    body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background-color: #f4f7f6;
-        color: #333;
-        margin: 0;
-        padding: 20px;
-    }
-    .section-title {
-        border-bottom: 2px solid #ccc;
-        padding-bottom: 5px;
-        margin-top: 30px;
-        color: #2c3e50;
-    }
-    /* 卡片排版 */
-    .row {
-        display: flex;
-        gap: 20px;
-        margin-bottom: 20px;
-        flex-wrap: wrap;
-    }
-    .card {
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        padding: 20px;
-        flex: 1;
-        min-width: 300px;
-    }
-    .card h3 {
-        margin-top: 0;
-        font-size: 1.1em;
-        color: #34495e;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 10px;
-    }
-    ul {
-        list-style-type: none;
-        padding: 0;
-        margin: 0;
-    }
-    li {
-        padding: 8px 0;
-        border-bottom: 1px dashed #eee;
-        font-size: 0.95em;
-    }
-    li:last-child {
-        border-bottom: none;
-    }
-    /* Checklist 樣式 */
-    .checklist label {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        cursor: pointer;
-    }
-    /* 假期標籤樣式 */
-    .holiday-badge {
-        background-color: #e74c3c;
-        color: white;
-        padding: 2px 8px;
-        border-radius: 12px;
-        font-size: 0.8em;
-        margin-left: 10px;
-    }
-    .holiday-text {
-        color: #e74c3c;
-        font-weight: bold;
-    }
-    /* 備註區塊 */
-    .notes-area {
-        width: 100%;
-        min-height: 100px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        padding: 10px;
-        box-sizing: border-box;
-        resize: vertical;
-    }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>One on One Meeting Form</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card { border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 1rem; height: 100%; }
+        .card-header { background-color: #ffffff; border-bottom: 2px solid #e9ecef; font-weight: bold; color: #333; border-radius: 10px 10px 0 0 !important; }
+        .section-title { font-size: 1.2rem; font-weight: bold; margin: 1.5rem 0 1rem 0; color: #2c3e50; border-left: 4px solid #3498db; padding-left: 10px; }
+        .task-item { font-size: 0.9rem; padding: 5px 0; border-bottom: 1px dashed #eee; }
+        .task-item:last-child { border-bottom: none; }
+        .important-yes { color: #e74c3c; font-weight: bold; }
+        .urgent-yes { color: #e67e22; font-weight: bold; }
+        textarea { width: 100%; border: 1px solid #ced4da; border-radius: 5px; padding: 10px; resize: vertical; min-height: 100px; }
+        .btn-export { background-color: #27ae60; color: white; font-weight: bold; width: 100%; padding: 12px; border-radius: 8px; margin-top: 20px; }
+        .btn-export:hover { background-color: #2ecc71; color: white; }
+    </style>
 </head>
 <body>
 
-    <h2 class="section-title">Review</h2>
-    <div class="row">
-        <div class="card">
-            <h3>Classes</h3>
-            <ul>
-                <li>（星期一）：（A行資料）-（F行資料）</li>
-                <li>（星期三）：（A行資料）-（F行資料）</li>
-            </ul>
+<div class="container py-4" id="pdf-content">
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-6 col-12 mb-2 mb-md-0">
+            <h2 class="mb-1 text-primary" style="font-weight: 800;">One on One Meeting Form</h2>
+            <div class="text-muted" id="current-date-display">今日日期：載入中...</div>
         </div>
-
-        <div class="card">
-            <h3>Tasks</h3>
-            <ul>
-                <li>[B行資料]-C行資料-H行資料-（餘下 3 日）</li>
-                <li>[B行資料]-C行資料-H行資料-（餘下 5 日）</li>
-            </ul>
-        </div>
-
-        <div class="card">
-            <h3>Checklist</h3>
-            <ul class="checklist">
-                <li><label><input type="checkbox"> （個人）檢查自己當週行程</label></li>
-                <li><label><input type="checkbox"> （個人）備妥兩星期內教材</label></li>
-                <li><label><input type="checkbox"> （導師管理）導師提示</label></li>
-                <li><label><input type="checkbox"> （導師管理）下兩星期教材安排</label></li>
-                <li><label><input type="checkbox"> （導師管理）檢查上星期導師進度表</label></li>
-            </ul>
+        <div class="col-md-6 col-12 d-flex justify-content-md-end gap-2 flex-wrap">
+            <select id="employee-select" class="form-select w-auto">
+                <option value="Harry">Harry</option>
+                <option value="Zoe">Zoe</option>
+                <option value="Ian">Ian</option>
+                <option value="Chris">Chris</option>
+            </select>
+            <select id="week-select" class="form-select w-auto"></select>
         </div>
     </div>
 
-    <h2 class="section-title">Preview (Plan and Prioritize)</h2>
+    <div class="section-title">Review</div>
+    <div class="row g-3">
+        <div class="col-md-4 col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">上週回顧 (Finished Tasks & Classes)</div>
+                <div class="card-body">
+                    <h6 class="text-muted border-bottom pb-1">已完成工作 (Master Task List)</h6>
+                    <div id="review-tasks" class="mb-3">載入中...</div>
+                    <h6 class="text-muted border-bottom pb-1">已完成課堂 (課堂總匯)</h6>
+                    <div id="review-classes">載入中...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 col-12">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">Tasks to follow up</div>
+                <div class="card-body" id="followup-tasks">
+                    載入中...
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">Weekly Checklist</div>
+                <div class="card-body">
+                    <div class="form-check"><input class="form-check-input" type="checkbox" id="chk1"><label class="form-check-label" for="chk1">（個人）檢查自己當週行程</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" id="chk2"><label class="form-check-label" for="chk2">（個人）備妥兩星期內教材</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" id="chk3"><label class="form-check-label" for="chk3">（導師管理）導師提示</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" id="chk4"><label class="form-check-label" for="chk4">（導師管理）下兩星期教材安排</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" id="chk5"><label class="form-check-label" for="chk5">（導師管理）檢查上星期導師進度表</label></div>
+                </div>
+            </div>
+        </div>
+    </div>
     
-    <div class="row">
-        <div class="card" style="flex: 2;">
-            <h3>Time Prediction (包含香港公眾假期)</h3>
-            <ul>
-                <li>2月15日 (日)</li>
-                <li>2月16日 (一)</li>
-                <li class="holiday-text">2月17日 (二) <span class="holiday-badge">農曆年初一</span></li>
-                <li class="holiday-text">2月18日 (三) <span class="holiday-badge">農曆年初二</span></li>
-                <li class="holiday-text">2月19日 (四) <span class="holiday-badge">農曆年初三</span></li>
-                <li>2月20日 (五)</li>
-            </ul>
-        </div>
-
-        <div class="card" style="flex: 1;">
-            <h3>Classes in this week</h3>
-            <ul>
-                <li>（星期一）：（A行資料）-（F行資料）</li>
-                <li>（星期三）：（A行資料）-（F行資料）</li>
-            </ul>
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">Obstacles & Notes</div>
+                <div class="card-body p-2">
+                    <textarea placeholder="請輸入內容..."></textarea>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="row">
-        <div class="card">
-            <h3>Pending Tasks (Sorted by Important > Urgent)</h3>
-            <ul>
-                <li><strong>[Important & Urgent]</strong> [B行]-C行-H行-（餘下日數）</li>
-                <li><strong>[Important]</strong> [B行]-C行-H行-（餘下日數）</li>
-                <li><strong>[Urgent]</strong> [B行]-C行-H行-（餘下日數）</li>
-            </ul>
+    <div class="section-title mt-4">Preview (Plan and Prioritize)</div>
+    <div class="row g-3">
+        <div class="col-md-6 col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">Time Prediction (本週預測)</div>
+                <div class="card-body" id="time-prediction" style="font-size: 0.95rem; line-height: 1.8;">
+                    載入中...
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">Classes in this week</div>
+                <div class="card-body" id="preview-classes">
+                    載入中...
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="row">
-        <div class="card">
-            <h3>Additional Notes / Preview</h3>
-            <textarea class="notes-area" placeholder="請在此輸入備註..."></textarea>
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-danger text-white">To do list</div>
+                <div class="card-body" id="todo-tasks">
+                    載入中...
+                </div>
+            </div>
         </div>
     </div>
 
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">Additional Notes</div>
+                <div class="card-body p-2">
+                    <textarea placeholder="請輸入內容..."></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container mb-5">
+    <button class="btn btn-export" id="export-btn">匯出成 PDF (儲存至設備)</button>
+    <div class="text-center text-muted mt-2" style="font-size: 0.8rem;">* 註：基於 Google 安全限制，下載 PDF 後請手動上傳至您的 Folder ID: 1S3lZvpwbd3fHJMvAxcZFjKmWPd7DYZHx</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.10/dayjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<script>
+    // 2026年香港主要公眾假期 (供運算工作天使用)
+    const hkHolidays2026 = ['2026-01-01','2026-02-17','2026-02-18','2026-02-19','2026-04-03','2026-04-04','2026-04-06','2026-04-07','2026-05-01','2026-05-25','2026-06-19','2026-07-01','2026-09-26','2026-10-01','2026-10-26','2026-12-25','2026-12-26'];
+
+    const masterTaskUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLnU0BMgl4AFXJuTVBtdmcCvuhDbv7TJxLHGK0BQZ9pJTOxdcLQ2QU1inCjXeZKJdc9v3-y4Kfk4aS/pub?output=csv';
+    const classUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQFFF43IJhu4qgR8KiR_Oo9lwv7LkuTcjHzebpTvUd-SnnivG_5GwDT3-JzEncLTxKXbZuQ8LnU90n3/pub?output=csv'; // 已自動轉為CSV格式
+
+    let tasksData = [];
+    let classesData = [];
+
+    // 初始化日期與選單
+    function initDates() {
+        document.getElementById('current-date-display').innerText = `今日日期：${dayjs().format('YYYY年MM月DD日')}`;
+        
+        const weekSelect = document.getElementById('week-select');
+        let today = dayjs();
+        // 找到最近的星期日
+        let currentSunday = today.day(0); 
+        
+        // 生成前後各10個星期供選擇
+        for (let i = -10; i <= 10; i++) {
+            let sunday = currentSunday.add(i, 'week');
+            let saturday = sunday.add(6, 'day');
+            let option = document.createElement('option');
+            option.value = sunday.format('YYYY-MM-DD');
+            option.text = `${sunday.format('YYYY/MM/DD')} - ${saturday.format('YYYY/MM/DD')}`;
+            if (i === 0) option.selected = true;
+            weekSelect.appendChild(option);
+        }
+    }
+
+    // 解析中文日期 (例: 2026年2月4日)
+    function parseChineseDate(dateStr) {
+        if (!dateStr) return null;
+        const match = dateStr.match(/(\d+)年(\d+)月(\d+)日/);
+        if (match) {
+            return dayjs(`${match[1]}-${match[2]}-${match[3]}`);
+        }
+        return dayjs(dateStr); // 嘗試一般解析
+    }
+
+    // 解析時間字串 (例: 15:00-17:30) 回傳分鐘數
+    function parseDuration(timeStr) {
+        if (!timeStr || !timeStr.includes('-')) return 0;
+        let [start, end] = timeStr.split('-');
+        let [sh, sm] = start.split(':').map(Number);
+        let [eh, em] = end.split(':').map(Number);
+        return (eh * 60 + em) - (sh * 60 + sm);
+    }
+    
+    // 計算該日最後下課時間距離 18:00 的課後時間
+    function calcAfterClassTime(timeStr) {
+        if (!timeStr || !timeStr.includes('-')) return 0;
+        let end = timeStr.split('-')[1];
+        let [eh, em] = end.split(':').map(Number);
+        let endMins = eh * 60 + em;
+        let limitMins = 18 * 60; // 18:00
+        return limitMins > endMins ? (limitMins - endMins) : 0;
+    }
+
+    // 任務排序邏輯 (Important=YES 優先, 再看 Urgent=YES)
+    function sortTasks(a, b) {
+        let aImp = (a[5] || '').toUpperCase() === 'YES' ? 1 : 0; // F行(Index 5)
+        let bImp = (b[5] || '').toUpperCase() === 'YES' ? 1 : 0;
+        let aUrg = (a[6] || '').toUpperCase() === 'YES' ? 1 : 0; // G行(Index 6)
+        let bUrg = (b[6] || '').toUpperCase() === 'YES' ? 1 : 0;
+        
+        if (aImp !== bImp) return bImp - aImp;
+        return bUrg - aUrg;
+    }
+
+    // 載入資料
+    async function loadData() {
+        try {
+            const [taskRes, classRes] = await Promise.all([
+                fetch(masterTaskUrl).then(r => r.text()),
+                fetch(classUrl).then(r => r.text())
+            ]);
+
+            tasksData = Papa.parse(taskRes, { header: false, skipEmptyLines: true }).data.slice(1); // 略過標題行
+            classesData = Papa.parse(classRes, { header: false, skipEmptyLines: true }).data.slice(1);
+
+            renderUI();
+        } catch (error) {
+            alert('讀取 Google Sheet 資料失敗，請檢查網址或發佈設定。');
+            console.error(error);
+        }
+    }
+
+    // 渲染 UI
+    function renderUI() {
+        const empName = document.getElementById('employee-select').value;
+        const selectedSundayStr = document.getElementById('week-select').value;
+        
+        const currentWeekStart = dayjs(selectedSundayStr);
+        const currentWeekEnd = currentWeekStart.add(6, 'day');
+        const prevWeekStart = currentWeekStart.subtract(1, 'week');
+        const prevWeekEnd = prevWeekStart.add(6, 'day');
+
+        // ==== 1. Review - Finished Tasks (上星期) ====
+        // E行=Index 4 (PIC), K行=Index 10 (Finished Date), H行=Index 7 (Progress)
+        let finishedTasks = tasksData.filter(row => {
+            let pics = (row[4] || '').split('/');
+            let isPic = pics.includes(empName);
+            let isFinished = (row[7] || '').trim().toUpperCase() === 'FINISHED';
+            let finishDate = parseChineseDate(row[10]);
+            let inPrevWeek = finishDate && finishDate.isAfter(prevWeekStart.subtract(1,'day')) && finishDate.isBefore(prevWeekEnd.add(1,'day'));
+            return isPic && isFinished && inPrevWeek;
+        }).sort(sortTasks);
+
+        let finishedTasksHtml = finishedTasks.map(t => `<div class="task-item">[${t[1]}]-${t[2]}</div>`).join('');
+        document.getElementById('review-tasks').innerHTML = finishedTasksHtml || '<div class="text-muted">無紀錄</div>';
+
+        // ==== 2. Review - Classes (上星期) ====
+        // G行=Index 6 (導師), D行=Index 3 (日期)
+        let prevClasses = classesData.filter(row => {
+            let isTutor = (row[6] || '').includes(empName);
+            let classDate = dayjs(row[3]); // 假設課堂表日期為標準格式或可被解析
+            let inPrevWeek = classDate.isValid() && classDate.isAfter(prevWeekStart.subtract(1,'day')) && classDate.isBefore(prevWeekEnd.add(1,'day'));
+            return isTutor && inPrevWeek;
+        });
+        
+        let prevClassesHtml = prevClasses.map(c => `<div class="task-item">(${c[4]})：${c[0]}-${c[5]}</div>`).join('');
+        document.getElementById('review-classes').innerHTML = prevClassesHtml || '<div class="text-muted">無紀錄</div>';
+
+        // ==== 3. Follow up / To do Tasks (未完成) ====
+        let unfinishedTasks = tasksData.filter(row => {
+            let pics = (row[4] || '').split('/');
+            let isPic = pics.includes(empName);
+            let isFinished = (row[7] || '').trim().toUpperCase() === 'FINISHED';
+            return isPic && !isFinished;
+        }).sort(sortTasks);
+
+        let unfinHtml = unfinishedTasks.map(t => {
+            let deadline = parseChineseDate(row[9]); // J行=Index 9
+            let remainDays = deadline ? deadline.diff(dayjs(), 'day') : 'N/A';
+            return `<div class="task-item">[${t[1]}]-${t[2]}-${t[7]}-(餘 ${remainDays} 日)</div>`;
+        }).join('');
+        
+        document.getElementById('followup-tasks').innerHTML = unfinHtml || '<div class="text-muted">無未完成任務</div>';
+        document.getElementById('todo-tasks').innerHTML = unfinHtml || '<div class="text-muted">無未完成任務</div>';
+
+        // ==== 4. Preview - Classes (本星期) ====
+        let currClasses = classesData.filter(row => {
+            let isTutor = (row[6] || '').includes(empName);
+            let classDate = dayjs(row[3]);
+            let inCurrWeek = classDate.isValid() && classDate.isAfter(currentWeekStart.subtract(1,'day')) && classDate.isBefore(currentWeekEnd.add(1,'day'));
+            return isTutor && inCurrWeek;
+        });
+
+        let currClassesHtml = currClasses.map(c => `<div class="task-item">(${c[4]})：${c[0]}-${c[5]}</div>`).join('');
+        document.getElementById('preview-classes').innerHTML = currClassesHtml || '<div class="text-muted">無紀錄</div>';
+
+        // ==== 5. Time Prediction 計算 ====
+        // 運算工作日與假期 (一至五)
+        let workDays = 0;
+        let holidayCount = 0;
+        for (let i = 1; i <= 5; i++) {
+            let d = currentWeekStart.add(i, 'day').format('YYYY-MM-DD');
+            if (hkHolidays2026.includes(d)) {
+                holidayCount++;
+            } else {
+                workDays++;
+            }
+        }
+        
+        let totalHours = workDays * 9;
+        let lunchHours = workDays * 1;
+        
+        let weekdayMins = 0;
+        let weekendMins = 0;
+        let weekdayClassDays = new Set();
+        let afterClassMinsTotal = 0;
+
+        // 計算每天的最後下課時間 (假設依據每天來歸類)
+        let dailyLastClass = {};
+
+        currClasses.forEach(c => {
+            let cDate = dayjs(c[3]);
+            let dayOfWeek = cDate.day(); // 0(日) - 6(六)
+            let duration = parseDuration(c[5]);
+            
+            // 星期一至星期六 Weekday Teaching (依照需求描述)
+            if (dayOfWeek >= 1 && dayOfWeek <= 6) {
+                weekdayMins += duration;
+                if (dayOfWeek <= 5) weekdayClassDays.add(dayOfWeek); // 僅算一至五的交通
+            }
+            // 星期六至星期日 Weekend Teaching
+            if (dayOfWeek === 6 || dayOfWeek === 0) {
+                weekendMins += duration;
+            }
+
+            // 尋找每日最晚下課時間計算課後時間
+            let dateStr = cDate.format('YYYY-MM-DD');
+            let endStr = c[5] ? c[5].split('-')[1] : null;
+            if (endStr) {
+                if (!dailyLastClass[dateStr] || endStr > dailyLastClass[dateStr]) {
+                    dailyLastClass[dateStr] = endStr;
+                }
+            }
+        });
+
+        for (let d in dailyLastClass) {
+            afterClassMinsTotal += calcAfterClassTime(`00:00-${dailyLastClass[d]}`);
+        }
+
+        let transportationHours = weekdayClassDays.size * 1;
+        let afterClassHours = (afterClassMinsTotal / 60).toFixed(1);
+        let weekdayHrs = (weekdayMins / 60).toFixed(1);
+        let actualWorkHours = (totalHours - weekdayHrs - transportationHours - lunchHours - afterClassHours).toFixed(1);
+        let teachingRatio = currClasses.length > 0 && workDays > 0 ? (currClasses.length / workDays).toFixed(2) : 0;
+
+        document.getElementById('time-prediction').innerHTML = `
+            <b>Total:</b> ${totalHours} 小時 (${workDays} 個工作日 x 9小時)<br>
+            <b>本週公眾假期:</b> ${holidayCount} 日<br>
+            <b>Weekday Teaching Hour:</b> ${weekdayHrs} 小時<br>
+            <b>Weekend Teaching Hour:</b> ${(weekendMins / 60).toFixed(1)} 小時<br>
+            <b>Transportation:</b> ${transportationHours} 小時<br>
+            <b>Lunch:</b> ${lunchHours} 小時<br>
+            <b>課後時間:</b> ${afterClassHours} 小時<br>
+            <b>實際可工作時數:</b> ${actualWorkHours} 小時<br>
+            <b>Teaching Ratio in this week:</b> ${currClasses.length}/${workDays} = ${teachingRatio}
+        `;
+    }
+
+    // 事件監聽
+    document.getElementById('employee-select').addEventListener('change', renderUI);
+    document.getElementById('week-select').addEventListener('change', renderUI);
+
+    // 匯出 PDF
+    document.getElementById('export-btn').addEventListener('click', function() {
+        const element = document.getElementById('pdf-content');
+        const empName = document.getElementById('employee-select').value;
+        const weekSelect = document.getElementById('week-select');
+        const weekText = weekSelect.options[weekSelect.selectedIndex].text.replace(/ \/ /g, '').replace(/ - /g, '-');
+        
+        const fileName = `"Meeting form"- ${empName}-${weekText}.pdf`;
+
+        const opt = {
+            margin:       0.3,
+            filename:     fileName,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2 },
+            jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+        };
+
+        // 隱藏按鈕避免被印進去 (按鈕在容器外，所以不會印到，安全起見)
+        html2pdf().set(opt).from(element).save();
+    });
+
+    // 啟動
+    initDates();
+    loadData();
+</script>
 </body>
 </html>
