@@ -250,6 +250,10 @@
             selectedSaturday.setDate(selectedSaturday.getDate() + 6);
             selectedSaturday.setHours(23, 59, 59, 999);
 
+            // 定義基準日為所選星期的首日(星期日)
+            let baseDate = new Date(selectedSunday);
+            baseDate.setHours(0, 0, 0, 0);
+
             let userTasks = masterTasks.filter(row => 
                 (row[3] && row[3].includes(selectedName)) || 
                 (row[4] && row[4].includes(selectedName))
@@ -281,15 +285,13 @@
             let followUpTasks = [];
             let deadlineThisWeekTasks = [];
             let otherTasks = [];
-            
-            let today = new Date();
-            today.setHours(0, 0, 0, 0);
 
             allIncompleteTasks.forEach(task => {
                 let deadlineDate = parseChineseDate(task[9]); // J行 Deadline
                 
                 if (deadlineDate && isDateInWeek(deadlineDate, lastSunday)) {
-                    if (deadlineDate.getTime() < today.getTime()) {
+                    // 使用 baseDate (選取的星期日) 作為過期判斷基準
+                    if (deadlineDate.getTime() < baseDate.getTime()) {
                         followUpTasks.push(task);
                     }
                 }
@@ -343,7 +345,8 @@
                     let deadlineDate = parseChineseDate(task[9]);
                     
                     if (deadlineDate) {
-                        let diffTime = deadlineDate.getTime() - today.getTime();
+                        // 使用 baseDate (選取的星期日) 計算距離天數
+                        let diffTime = deadlineDate.getTime() - baseDate.getTime();
                         let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                         if (diffDays > 0) {
                             diffText = `(餘 ${diffDays} 日)`;
