@@ -93,7 +93,7 @@
 
                 <div class="bg-white p-4 rounded shadow-sm border border-gray-200">
                     <h3 class="font-bold text-gray-700 mb-2">Classes in this week</h3>
-                    <ul id="thisWeekClassesList" class="text-sm list-disc pl-4 space-y-1 mt-2 text-gray-700 overflow-y-auto h-32"></ul>
+                    <ul id="thisWeekClassesList" class="text-sm list-disc pl-4 space-y-1 mt-2 text-gray-700"></ul>
                 </div>
             </div>
 
@@ -127,10 +127,9 @@
         const MASTER_TASK_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSLnU0BMgl4AFXJuTVBtdmcCvuhDbv7TJxLHGK0BQZ9pJTOxdcLQ2QU1inCjXeZKJdc9v3-y4Kfk4aS/pub?output=csv';
         const CLASSES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQFFF43IJhu4qgR8KiR_Oo9lwv7LkuTcjHzebpTvUd-SnnivG_5GwDT3-JzEncLTxKXbZuQ8LnU90n3/pub?output=csv'; 
         
-        // 您的 Google Apps Script Web App URL
         const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxVU4pjBeQCbOD616uDR5nhvFKDONEq035tqDpujLZZ0pEuJRabG2h2kDJNB0fKxmw6mQ/exec';
 
-        // 香港公眾假期資料庫 (2024-2026) - 用於計算星期一至五的放假日數
+        // 香港公眾假期資料庫 (2024-2026)
         const HK_HOLIDAYS = {
             "2024-01-01": "元旦", "2024-02-12": "農曆年初三", "2024-02-13": "農曆年初四", "2024-03-29": "耶穌受難節",
             "2024-04-01": "復活節星期一", "2024-04-04": "清明節", "2024-05-01": "勞動節", "2024-05-15": "佛誕",
@@ -276,7 +275,9 @@
             if(finishedTasks.length === 0) finishedTasksList.innerHTML = '<li class="text-gray-400">無紀錄</li>';
             finishedTasks.forEach(task => {
                 let tag = (task[4] === 'YES' ? '<span class="text-red-500 font-bold">[!]</span> ' : '');
-                finishedTasksList.innerHTML += `<li>${tag}${task[2]}</li>`;
+                let bCol = task[1] || '';
+                let projectText = (bCol && bCol.trim().toUpperCase() !== 'NO') ? `[${bCol}] - ` : '';
+                finishedTasksList.innerHTML += `<li>${tag}${projectText}${task[2]}</li>`;
             });
 
             let allIncompleteTasks = userTasks.filter(row => {
@@ -420,7 +421,6 @@
                 thisWeekClassesList.innerHTML += `<li>${weekdayStr}：${cls[0] || ''} - ${cls[5] || ''}</li>`;
             });
 
-            // ===== 處理 Time Prediction 及公眾假期計算 =====
             let publicHolidaysCount = 0;
             let holidaysDetails = [];
 
