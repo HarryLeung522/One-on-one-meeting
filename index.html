@@ -101,12 +101,12 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div class="bg-orange-50 p-4 rounded shadow-sm border border-orange-100 flex flex-col">
                     <h3 class="font-bold text-orange-700 mb-3">deadline in this week</h3>
-                    <div id="deadlineThisWeekList" class="space-y-2 flex-grow min-h-[50px]"></div>
+                    <div id="deadlineThisWeekList" class="space-y-3 flex-grow min-h-[50px]"></div>
                 </div>
 
                 <div class="bg-teal-50 p-4 rounded shadow-sm border border-teal-100 flex flex-col">
                     <h3 class="font-bold text-teal-700 mb-3">Other</h3>
-                    <div id="otherTodoList" class="space-y-2 flex-grow min-h-[50px]"></div>
+                    <div id="otherTodoList" class="space-y-3 flex-grow min-h-[50px]"></div>
                 </div>
             </div>
             
@@ -142,7 +142,6 @@
             let currentSunday = new Date(today);
             currentSunday.setDate(today.getDate() - currentDay);
             
-            // 擴大下拉選單日期：從過去 10 週到未來 10 週
             for (let i = -10; i <= 10; i++) {
                 let d = new Date(currentSunday);
                 d.setDate(d.getDate() + (i * 7));
@@ -233,10 +232,10 @@
             return tasks.sort((a, b) => {
                 let aImp = a[4] === 'YES' ? 1 : 0;
                 let bImp = b[4] === 'YES' ? 1 : 0;
-                if (aImp !== bImp) return bImp - aImp; // 優先 Important
+                if (aImp !== bImp) return bImp - aImp; 
                 let aUrg = a[5] === 'YES' ? 1 : 0;
                 let bUrg = b[5] === 'YES' ? 1 : 0;
-                return bUrg - aUrg; // 次要 Urgent
+                return bUrg - aUrg; 
             });
         }
 
@@ -247,18 +246,15 @@
             const lastSunday = new Date(selectedSunday);
             lastSunday.setDate(lastSunday.getDate() - 7);
 
-            // 定義所選星期的最後一天(星期六 23:59:59)作為 Deadline 的界線
             const selectedSaturday = new Date(selectedSunday);
             selectedSaturday.setDate(selectedSaturday.getDate() + 6);
             selectedSaturday.setHours(23, 59, 59, 999);
 
-            // 更新過濾邏輯：為了防止欄位稍微偏移，負責人(PIC)兼容 index 3 與 4
             let userTasks = masterTasks.filter(row => 
                 (row[3] && row[3].includes(selectedName)) || 
                 (row[4] && row[4].includes(selectedName))
             );
             
-            // ===== Finished Tasks (上週完成) =====
             let finishedTasks = userTasks.filter(row => {
                 let g = (row[6] || '').toString().trim().toUpperCase();
                 let h = (row[7] || '').toString().trim().toUpperCase();
@@ -275,7 +271,6 @@
                 finishedTasksList.innerHTML += `<li>${tag}${task[2]}</li>`;
             });
 
-            // 取得所有「尚未完成」的任務，絕對排除 Finished
             let allIncompleteTasks = userTasks.filter(row => {
                 let g = (row[6] || '').toString().trim().toUpperCase();
                 let h = (row[7] || '').toString().trim().toUpperCase();
@@ -293,25 +288,20 @@
             allIncompleteTasks.forEach(task => {
                 let deadlineDate = parseChineseDate(task[9]); // J行 Deadline
                 
-                // === Review: Tasks to follow up ===
-                // 條件：Deadline 落在「上星期日子內」且 相對於今天「已過期」
                 if (deadlineDate && isDateInWeek(deadlineDate, lastSunday)) {
                     if (deadlineDate.getTime() < today.getTime()) {
                         followUpTasks.push(task);
                     }
                 }
                 
-                // === Preview: To Do List ===
-                // this week: 今個星期及之前Deadline的未完成項目
                 if (deadlineDate && deadlineDate.getTime() <= selectedSaturday.getTime()) {
                     deadlineThisWeekTasks.push(task);
                 } else {
-                    // other: 今個星期以後 或 無期限的未完成項目
                     otherTasks.push(task);
                 }
             });
 
-            // 渲染 Tasks to Follow up
+            // Tasks to Follow up (保持簡潔列表)
             const followUpList = document.getElementById('followUpTasksList');
             followUpList.innerHTML = '';
             if(followUpTasks.length === 0) followUpList.innerHTML = '<li class="text-gray-400">無紀錄</li>';
@@ -325,10 +315,10 @@
                 let projectText = (bCol && bCol.trim().toUpperCase() !== 'NO') ? `[${bCol}] - ` : '';
                 let extraInfo = hCol ? ` - ${hCol}` : '';
                 
-                followUpList.innerHTML += `<li class="leading-tight">${tag}${projectText}${cCol}${extraInfo} - <span class="text-xs text-blue-600 font-bold">(已過期)</span></li>`;
+                followUpList.innerHTML += `<li class="leading-tight">${tag}${projectText}${cCol}${extraInfo} - <span class="text-xs text-red-600 font-bold">(已過期)</span></li>`;
             });
 
-            // 渲染 To Do List 咭片
+            // ===== 渲染 To Do List (全新設計的咭片) =====
             const renderTodoListCards = (containerId, tasks) => {
                 const list = document.getElementById(containerId);
                 list.innerHTML = '';
@@ -338,42 +328,62 @@
                 }
 
                 tasks.forEach(task => {
-                    let bCol = task[1] || '';
-                    let projectText = (bCol && bCol.trim().toUpperCase() !== 'NO') ? `[${bCol}]-` : '';
-                    let cCol = task[2] || '無';
-                    let hCol = task[7] || '無';
-                    let eCol = task[4] || '無';
-                    let fCol = task[5] || '無';
-                    let jCol = task[9] || '無期限';
+                    let bCol = task[1] || '無';      // Project (範疇)
+                    let cCol = task[2] || '未命名任務'; // Task (標題)
+                    let eCol = task[4] || '';       // Important
+                    let fCol = task[5] || '';       // Urgent
+                    let gCol = task[6] || '無';      // Progress (狀態)
+                    let jCol = task[9] || '無期限';   // Deadline
+                    
+                    // 處理空值顯示 (如果 Project 是 NO 則顯示無)
+                    if (bCol.trim().toUpperCase() === 'NO') bCol = '無';
 
                     let diffText = "無期限";
+                    let deadlineColorClass = "text-gray-500";
                     let deadlineDate = parseChineseDate(task[9]);
                     
                     if (deadlineDate) {
                         let diffTime = deadlineDate.getTime() - today.getTime();
                         let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                         if (diffDays > 0) {
-                            diffText = `餘 ${diffDays} 日`;
+                            diffText = `(餘 ${diffDays} 日)`;
+                            deadlineColorClass = "text-orange-600 font-bold";
                         } else if (diffDays === 0) {
-                            diffText = `今日到期`;
+                            diffText = `(今天到期！)`;
+                            deadlineColorClass = "text-red-600 font-bold";
                         } else {
-                            diffText = `已過期 ${Math.abs(diffDays)} 日`;
+                            diffText = `(已過期 ${Math.abs(diffDays)} 日！)`;
+                            deadlineColorClass = "text-red-700 font-bold";
                         }
                     }
 
-                    let tag = (task[4] === 'YES' ? '<span class="text-red-500 font-bold">[!]</span> ' : '');
-                    
-                    // 以咭片格式呈現
+                    // 產生對應的標籤 HTML
+                    let importantBadge = eCol === 'YES' ? `<span class="bg-[#5cb85c] text-white px-2 py-0.5 rounded text-xs font-semibold tracking-wide shadow-sm">Important</span>` : '';
+                    let urgentBadge = fCol === 'YES' ? `<span class="bg-[#e67e22] text-white px-2 py-0.5 rounded text-xs font-semibold tracking-wide shadow-sm">Urgent</span>` : '';
+
                     list.innerHTML += `
-                        <div class="bg-white p-3 rounded shadow-sm border border-gray-200 cursor-grab hover:border-blue-400 transition-colors group">
-                            <div class="flex items-start gap-2">
-                                <div class="mt-0.5 text-gray-300 group-hover:text-gray-500 drag-handle-icon">
+                        <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200 cursor-grab hover:border-blue-300 transition-colors group relative">
+                            <div class="flex items-start gap-3">
+                                <div class="mt-1 text-gray-300 group-hover:text-gray-500 drag-handle-icon flex-shrink-0 transition-colors">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                                       <path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
                                     </svg>
                                 </div>
-                                <div class="text-sm leading-tight text-gray-700 flex-1">
-                                    ${tag}${projectText}${cCol}-${hCol}-${eCol}-${fCol}-${jCol}-<span class="text-xs text-blue-600 font-bold">(${diffText})</span>
+                                
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex flex-wrap items-center gap-2 mb-1.5">
+                                        <span class="font-bold text-gray-800 text-base break-words">${cCol}</span>
+                                        ${importantBadge}
+                                        ${urgentBadge}
+                                    </div>
+                                    
+                                    <div class="text-gray-500 text-sm mb-1 truncate">
+                                        範疇: ${bCol} <span class="mx-1">|</span> 狀態: ${gCol}
+                                    </div>
+                                    
+                                    <div class="text-gray-500 text-sm">
+                                        Deadline: ${jCol} <span class="${deadlineColorClass}">${diffText}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -386,7 +396,7 @@
 
             const weekdaysMap = ['日', '一', '二', '三', '四', '五', '六'];
 
-            // ===== 上星期完成課堂 =====
+            // 上星期完成課堂
             let lastWeekClasses = classesData.filter(row => row[6] && row[6].includes(selectedName) && isDateInWeek(parseChineseDate(row[3]), lastSunday));
             lastWeekClasses.sort((a, b) => parseChineseDate(a[3]) - parseChineseDate(b[3]));
             
@@ -400,7 +410,7 @@
                 classesList.innerHTML += `<li>${weekdayStr}：${cls[0] || ''} - ${cls[5] || ''}</li>`;
             });
 
-            // ===== 本星期課堂 (Classes in this week) =====
+            // 本星期課堂 
             let thisWeekClasses = classesData.filter(row => row[6] && row[6].includes(selectedName) && isDateInWeek(parseChineseDate(row[3]), selectedSunday));
             
             thisWeekClasses.sort((a, b) => parseChineseDate(a[3]) - parseChineseDate(b[3]));
@@ -444,7 +454,6 @@
             let lunchH = workDays * 1;
             let actualWorkH = totalHours - weekdayTeachingH - transH - lunchH - afterClassHours;
             
-            // 計算 Teaching Ratio 及實數
             let ratioDecimal = workDays > 0 ? (totalClasses / workDays).toFixed(2) : 0;
             let teachingRatio = totalClasses > 0 ? `${totalClasses} / ${workDays} (${ratioDecimal})` : `0 / ${workDays} (0)`;
 
@@ -480,9 +489,9 @@
         // 載入資料並在載入完成後初始化拖拉功能
         loadData().then(() => {
             const sortableOptions = {
-                group: 'todo-cards', // 讓兩個列表之間的咭片可以互相拖曳
+                group: 'todo-cards', 
                 animation: 150,
-                ghostClass: 'opacity-40', // 拖拉時原位置顯示半透明
+                ghostClass: 'opacity-40', 
                 dragClass: 'shadow-xl',
                 easing: "cubic-bezier(1, 0, 0, 1)"
             };
@@ -497,10 +506,8 @@
             btn.disabled = true;
             btn.classList.replace('bg-green-600', 'bg-gray-400');
 
-            // 確保網頁滑動到最頂部，避免 html2canvas 擷取到上方的空白
             window.scrollTo(0, 0);
 
-            // 修復 html2canvas 無法擷取 textarea 最新輸入值的小技巧
             const textareas = document.querySelectorAll('textarea');
             textareas.forEach(ta => {
                 ta.innerHTML = ta.value; 
@@ -516,9 +523,9 @@
                 margin:       0.3,
                 filename:     filename,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, scrollY: 0 }, // scrollY: 0 是消除頂部空白的關鍵
+                html2canvas:  { scale: 2, scrollY: 0 }, 
                 jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
-                pagebreak:    { mode: ['css', 'legacy'] } // 確保支援 css 的 page-break
+                pagebreak:    { mode: ['css', 'legacy'] } 
             };
 
             try {
