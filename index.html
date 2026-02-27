@@ -7,15 +7,21 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <style>
         @media print {
             .no-print { display: none !important; }
+            /* 列印時隱藏拖拉圖示 */
+            .drag-handle-icon { display: none !important; }
         }
         /* 美化 textarea 確保列印時沒有邊框或捲軸問題 */
         textarea {
             resize: none;
             overflow: hidden;
         }
+        /* 拖曳時的游標樣式 */
+        .cursor-grab { cursor: grab; }
+        .cursor-grab:active { cursor: grabbing; }
     </style>
 </head>
 <body class="bg-gray-100 p-4 font-sans text-gray-800">
@@ -93,14 +99,14 @@
 
             <h2 class="text-xl font-bold text-gray-700 border-b-2 border-orange-200 pb-1 mb-4 pt-2">To Do List</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div class="bg-orange-50 p-4 rounded shadow-sm border border-orange-100">
-                    <h3 class="font-bold text-orange-700 mb-2">deadline in this week</h3>
-                    <ul id="deadlineThisWeekList" class="text-sm list-disc pl-4 space-y-2 text-gray-700"></ul>
+                <div class="bg-orange-50 p-4 rounded shadow-sm border border-orange-100 flex flex-col">
+                    <h3 class="font-bold text-orange-700 mb-3">deadline in this week</h3>
+                    <div id="deadlineThisWeekList" class="space-y-2 flex-grow min-h-[50px]"></div>
                 </div>
 
-                <div class="bg-teal-50 p-4 rounded shadow-sm border border-teal-100">
-                    <h3 class="font-bold text-teal-700 mb-2">Other</h3>
-                    <ul id="otherTodoList" class="text-sm list-disc pl-4 space-y-2 text-gray-700"></ul>
+                <div class="bg-teal-50 p-4 rounded shadow-sm border border-teal-100 flex flex-col">
+                    <h3 class="font-bold text-teal-700 mb-3">Other</h3>
+                    <div id="otherTodoList" class="space-y-2 flex-grow min-h-[50px]"></div>
                 </div>
             </div>
             
@@ -136,7 +142,8 @@
             let currentSunday = new Date(today);
             currentSunday.setDate(today.getDate() - currentDay);
             
-            for (let i = -2; i <= 4; i++) {
+            // 擴大下拉選單日期：從過去 10 週到未來 10 週
+            for (let i = -10; i <= 10; i++) {
                 let d = new Date(currentSunday);
                 d.setDate(d.getDate() + (i * 7));
                 let end = new Date(d);
@@ -321,12 +328,12 @@
                 followUpList.innerHTML += `<li class="leading-tight">${tag}${projectText}${cCol}${extraInfo} - <span class="text-xs text-blue-600 font-bold">(已過期)</span></li>`;
             });
 
-            // 渲染 To Do List (This week & Other)
-            const renderTodoList = (containerId, tasks) => {
+            // 渲染 To Do List 咭片
+            const renderTodoListCards = (containerId, tasks) => {
                 const list = document.getElementById(containerId);
                 list.innerHTML = '';
                 if (tasks.length === 0) {
-                    list.innerHTML = '<li class="text-gray-400">無紀錄</li>';
+                    list.innerHTML = '<div class="text-gray-400 p-2 text-sm">無紀錄</div>';
                     return;
                 }
 
@@ -355,12 +362,27 @@
                     }
 
                     let tag = (task[4] === 'YES' ? '<span class="text-red-500 font-bold">[!]</span> ' : '');
-                    list.innerHTML += `<li class="leading-tight mb-2">${tag}${projectText}${cCol}-${hCol}-${eCol}-${fCol}-${jCol}-<span class="text-xs text-blue-600 font-bold">(${diffText})</span></li>`;
+                    
+                    // 以咭片格式呈現
+                    list.innerHTML += `
+                        <div class="bg-white p-3 rounded shadow-sm border border-gray-200 cursor-grab hover:border-blue-400 transition-colors group">
+                            <div class="flex items-start gap-2">
+                                <div class="mt-0.5 text-gray-300 group-hover:text-gray-500 drag-handle-icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                      <path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                                    </svg>
+                                </div>
+                                <div class="text-sm leading-tight text-gray-700 flex-1">
+                                    ${tag}${projectText}${cCol}-${hCol}-${eCol}-${fCol}-${jCol}-<span class="text-xs text-blue-600 font-bold">(${diffText})</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
                 });
             };
 
-            renderTodoList('deadlineThisWeekList', deadlineThisWeekTasks);
-            renderTodoList('otherTodoList', otherTasks);
+            renderTodoListCards('deadlineThisWeekList', deadlineThisWeekTasks);
+            renderTodoListCards('otherTodoList', otherTasks);
 
             const weekdaysMap = ['日', '一', '二', '三', '四', '五', '六'];
 
@@ -454,7 +476,20 @@
         document.getElementById('nameSelect').addEventListener('change', updateDashboard);
 
         populateWeekSelect();
-        loadData();
+        
+        // 載入資料並在載入完成後初始化拖拉功能
+        loadData().then(() => {
+            const sortableOptions = {
+                group: 'todo-cards', // 讓兩個列表之間的咭片可以互相拖曳
+                animation: 150,
+                ghostClass: 'opacity-40', // 拖拉時原位置顯示半透明
+                dragClass: 'shadow-xl',
+                easing: "cubic-bezier(1, 0, 0, 1)"
+            };
+            
+            new Sortable(document.getElementById('deadlineThisWeekList'), sortableOptions);
+            new Sortable(document.getElementById('otherTodoList'), sortableOptions);
+        });
 
         document.getElementById('exportBtn').addEventListener('click', async () => {
             const btn = document.getElementById('exportBtn');
