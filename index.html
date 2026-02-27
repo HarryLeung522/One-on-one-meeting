@@ -251,11 +251,13 @@
                 (row[4] && row[4].includes(selectedName))
             );
             
-            // Finished Tasks (上週完成) - 兼容判斷 G行(6) 或原先的 H行(7) 是否為 Finished
-            let finishedTasks = userTasks.filter(row => 
-                (row[6] === 'Finished' || row[7] === 'Finished') && 
-                isDateInWeek(parseChineseDate(row[9]) || parseChineseDate(row[10]), lastSunday)
-            );
+            // ===== Finished Tasks (上週完成) =====
+            let finishedTasks = userTasks.filter(row => {
+                let g = (row[6] || '').toString().trim().toUpperCase();
+                let h = (row[7] || '').toString().trim().toUpperCase();
+                let isFin = (g === 'FINISHED' || g === '完成' || h === 'FINISHED' || h === '完成');
+                return isFin && isDateInWeek(parseChineseDate(row[9]) || parseChineseDate(row[10]), lastSunday);
+            });
             finishedTasks = sortTasks(finishedTasks);
             
             const finishedTasksList = document.getElementById('finishedTasksList');
@@ -266,17 +268,46 @@
                 finishedTasksList.innerHTML += `<li>${tag}${task[2]}</li>`;
             });
 
-            // ===== 中間咭片: Tasks to follow up =====
-            // 找出 G行(index 6) 不是 Finished 的項目
-            let followUpTasks = userTasks.filter(row => row[6] !== 'Finished' && row[6] !== '完成');
-            followUpTasks = sortTasks(followUpTasks); // 確保已用 Important > Urgent 排序
+            // 取得所有「尚未完成」的任務，絕對排除 Finished
+            let allIncompleteTasks = userTasks.filter(row => {
+                let g = (row[6] || '').toString().trim().toUpperCase();
+                let h = (row[7] || '').toString().trim().toUpperCase();
+                return g !== 'FINISHED' && g !== '完成' && h !== 'FINISHED' && h !== '完成';
+            });
+            allIncompleteTasks = sortTasks(allIncompleteTasks);
             
-            const followUpList = document.getElementById('followUpTasksList');
-            followUpList.innerHTML = '';
-            if(followUpTasks.length === 0) followUpList.innerHTML = '<li class="text-gray-400">無紀錄</li>';
+            let followUpTasks = [];
+            let deadlineThisWeekTasks = [];
+            let otherTasks = [];
             
             let today = new Date();
             today.setHours(0, 0, 0, 0);
+
+            allIncompleteTasks.forEach(task => {
+                let deadlineDate = parseChineseDate(task[9]); // J行 Deadline
+                
+                // === Review: Tasks to follow up ===
+                // 條件：Deadline 落在「上星期日子內」且 相對於今天「已過期」
+                if (deadlineDate && isDateInWeek(deadlineDate, lastSunday)) {
+                    if (deadlineDate.getTime() < today.getTime()) {
+                        followUpTasks.push(task);
+                    }
+                }
+                
+                // === Preview: To Do List ===
+                // this week: 今個星期及之前Deadline的未完成項目
+                if (deadlineDate && deadlineDate.getTime() <= selectedSaturday.getTime()) {
+                    deadlineThisWeekTasks.push(task);
+                } else {
+                    // other: 今個星期以後 或 無期限的未完成項目
+                    otherTasks.push(task);
+                }
+            });
+
+            // 渲染 Tasks to Follow up
+            const followUpList = document.getElementById('followUpTasksList');
+            followUpList.innerHTML = '';
+            if(followUpTasks.length === 0) followUpList.innerHTML = '<li class="text-gray-400">無紀錄</li>';
 
             followUpTasks.forEach(task => {
                 let tag = (task[4] === 'YES' ? '<span class="text-red-500 font-bold">[!]</span> ' : '');
@@ -284,42 +315,13 @@
                 let cCol = task[2] || '無'; 
                 let hCol = task[7] || '';   
                 
-                // 如果 Project 是 'No' 或空的，就不顯示 Project 標籤
                 let projectText = (bCol && bCol.trim().toUpperCase() !== 'NO') ? `[${bCol}] - ` : '';
-                
-                let deadlineDate = parseChineseDate(task[9]);
-                let daysText = "無期限";
-                
-                if (deadlineDate) {
-                    let diffTime = deadlineDate.getTime() - today.getTime();
-                    let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    if (diffDays > 0) {
-                        daysText = `餘 ${diffDays} 日`;
-                    } else if (diffDays === 0) {
-                        daysText = `今日到期`;
-                    } else {
-                        daysText = `已過期`; // Review 區塊依然保持簡短過期顯示
-                    }
-                }
-
                 let extraInfo = hCol ? ` - ${hCol}` : '';
-                followUpList.innerHTML += `<li class="leading-tight">${tag}${projectText}${cCol}${extraInfo} - <span class="text-xs text-blue-600 font-bold">(${daysText})</span></li>`;
+                
+                followUpList.innerHTML += `<li class="leading-tight">${tag}${projectText}${cCol}${extraInfo} - <span class="text-xs text-blue-600 font-bold">(已過期)</span></li>`;
             });
 
-            // ===== 處理 To Do List (Deadline in this week & Other) =====
-            let deadlineThisWeekTasks = [];
-            let otherTasks = [];
-
-            followUpTasks.forEach(task => {
-                let deadlineDate = parseChineseDate(task[9]); // J行
-                // 如果有截止日且早於或等於所選星期的星期六，歸類為 this week；否則歸類為 other
-                if (deadlineDate && deadlineDate.getTime() <= selectedSaturday.getTime()) {
-                    deadlineThisWeekTasks.push(task);
-                } else {
-                    otherTasks.push(task);
-                }
-            });
-
+            // 渲染 To Do List (This week & Other)
             const renderTodoList = (containerId, tasks) => {
                 const list = document.getElementById(containerId);
                 list.innerHTML = '';
@@ -348,7 +350,7 @@
                         } else if (diffDays === 0) {
                             diffText = `今日到期`;
                         } else {
-                            diffText = `已過期 ${Math.abs(diffDays)} 日`; // To Do List 要求顯示過期日數
+                            diffText = `已過期 ${Math.abs(diffDays)} 日`;
                         }
                     }
 
