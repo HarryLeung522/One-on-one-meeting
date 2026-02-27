@@ -143,10 +143,10 @@
             "2025-10-01": "國慶日", "2025-10-07": "中秋節翌日", "2025-10-29": "重陽節",
             "2025-12-25": "聖誕節", "2025-12-26": "聖誕節後第一個周日",
             
-            "2026-01-01": "元旦", "2026-02-17": "農曆年初一", "2026-02-18": "農曆年初二", "2026-02-19": "農曆年初三",
-            "2026-04-03": "耶穌受難節", "2026-04-06": "復活節星期一", "2026-05-01": "勞動節",
-            "2026-05-25": "佛誕翌日", "2026-06-19": "端午節", "2026-07-01": "香港特別行政區成立紀念日",
-            "2026-10-01": "國慶日", "2026-10-26": "重陽節翌日", "2026-12-25": "聖誕節", "2026-12-26": "聖誕節後第一個周日"
+            "2026-01-01": "一月一日", "2026-02-17": "農曆年初一", "2026-02-18": "農曆年初二", "2026-02-19": "農曆年初三",
+            "2026-04-03": "耶穌受難節", "2026-04-04": "耶穌受難節翌日", "2026-04-06": "清明節翌日", "2026-04-07": "復活節星期一翌日",
+            "2026-05-01": "勞動節", "2026-05-25": "佛誕翌日", "2026-06-19": "端午節", "2026-07-01": "香港特別行政區成立紀念日",
+            "2026-09-26": "中秋節翌日", "2026-10-01": "國慶日", "2026-10-19": "重陽節翌日", "2026-12-25": "聖誕節", "2026-12-26": "聖誕節後第一個周日"
         };
 
         let masterTasks = [];
@@ -206,19 +206,6 @@
             return (endMin - startMin) / 60;
         }
 
-        function calculateAfterClassHours(timeStr) {
-            if (!timeStr) return 0;
-            let parts = timeStr.split('-');
-            if (parts.length !== 2) return 0;
-            let end = parts[1].split(':').map(Number);
-            let endMin = end[0] * 60 + end[1];
-            let limitMin = 18 * 60; // 18:00
-            if (endMin < limitMin) {
-                return (limitMin - endMin) / 60;
-            }
-            return 0;
-        }
-
         async function loadData() {
             document.getElementById('loadingIndicator').style.display = 'block';
             document.getElementById('mainContent').style.display = 'none';
@@ -247,7 +234,6 @@
         }
 
         function sortTasks(tasks) {
-            // E行[4]=Important, F行[5]=Urgent
             return tasks.sort((a, b) => {
                 let aImp = a[4] === 'YES' ? 1 : 0;
                 let bImp = b[4] === 'YES' ? 1 : 0;
@@ -269,7 +255,6 @@
             selectedSaturday.setDate(selectedSaturday.getDate() + 6);
             selectedSaturday.setHours(23, 59, 59, 999);
 
-            // 定義基準日為所選星期的首日(星期日)
             let baseDate = new Date(selectedSunday);
             baseDate.setHours(0, 0, 0, 0);
 
@@ -306,10 +291,9 @@
             let otherTasks = [];
 
             allIncompleteTasks.forEach(task => {
-                let deadlineDate = parseChineseDate(task[9]); // J行 Deadline
+                let deadlineDate = parseChineseDate(task[9]);
                 
                 if (deadlineDate && isDateInWeek(deadlineDate, lastSunday)) {
-                    // 使用 baseDate (選取的星期日) 作為過期判斷基準
                     if (deadlineDate.getTime() < baseDate.getTime()) {
                         followUpTasks.push(task);
                     }
@@ -322,7 +306,6 @@
                 }
             });
 
-            // Tasks to Follow up (保持簡潔列表)
             const followUpList = document.getElementById('followUpTasksList');
             followUpList.innerHTML = '';
             if(followUpTasks.length === 0) followUpList.innerHTML = '<li class="text-gray-400">無紀錄</li>';
@@ -339,7 +322,6 @@
                 followUpList.innerHTML += `<li class="leading-tight">${tag}${projectText}${cCol}${extraInfo} - <span class="text-xs text-red-600 font-bold">(已過期)</span></li>`;
             });
 
-            // ===== 渲染 To Do List (全新設計的咭片) =====
             const renderTodoListCards = (containerId, tasks) => {
                 const list = document.getElementById(containerId);
                 list.innerHTML = '';
@@ -349,14 +331,13 @@
                 }
 
                 tasks.forEach(task => {
-                    let bCol = task[1] || '無';      // Project (範疇)
-                    let cCol = task[2] || '未命名任務'; // Task (標題)
-                    let eCol = task[4] || '';       // Important
-                    let fCol = task[5] || '';       // Urgent
-                    let gCol = task[6] || '無';      // Progress (狀態)
-                    let jCol = task[9] || '無期限';   // Deadline
+                    let bCol = task[1] || '無';
+                    let cCol = task[2] || '未命名任務';
+                    let eCol = task[4] || '';
+                    let fCol = task[5] || '';
+                    let gCol = task[6] || '無';
+                    let jCol = task[9] || '無期限';
                     
-                    // 處理空值顯示 (如果 Project 是 NO 則顯示無)
                     if (bCol.trim().toUpperCase() === 'NO') bCol = '無';
 
                     let diffText = "無期限";
@@ -364,7 +345,6 @@
                     let deadlineDate = parseChineseDate(task[9]);
                     
                     if (deadlineDate) {
-                        // 使用 baseDate (選取的星期日) 計算距離天數
                         let diffTime = deadlineDate.getTime() - baseDate.getTime();
                         let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                         if (diffDays > 0) {
@@ -379,7 +359,6 @@
                         }
                     }
 
-                    // 產生對應的標籤 HTML
                     let importantBadge = eCol === 'YES' ? `<span class="bg-[#5cb85c] text-white px-2 py-0.5 rounded text-xs font-semibold tracking-wide shadow-sm">Important</span>` : '';
                     let urgentBadge = fCol === 'YES' ? `<span class="bg-[#e67e22] text-white px-2 py-0.5 rounded text-xs font-semibold tracking-wide shadow-sm">Urgent</span>` : '';
 
@@ -391,18 +370,15 @@
                                       <path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
                                     </svg>
                                 </div>
-                                
                                 <div class="flex-1 min-w-0">
                                     <div class="flex flex-wrap items-center gap-2 mb-1.5">
                                         <span class="font-bold text-gray-800 text-base break-words">${cCol}</span>
                                         ${importantBadge}
                                         ${urgentBadge}
                                     </div>
-                                    
                                     <div class="text-gray-500 text-sm mb-1 truncate">
                                         範疇: ${bCol} <span class="mx-1">|</span> 狀態: ${gCol}
                                     </div>
-                                    
                                     <div class="text-gray-500 text-sm">
                                         Deadline: ${jCol} <span class="${deadlineColorClass}">${diffText}</span>
                                     </div>
@@ -418,7 +394,6 @@
 
             const weekdaysMap = ['日', '一', '二', '三', '四', '五', '六'];
 
-            // 上星期完成課堂
             let lastWeekClasses = classesData.filter(row => row[6] && row[6].includes(selectedName) && isDateInWeek(parseChineseDate(row[3]), lastSunday));
             lastWeekClasses.sort((a, b) => parseChineseDate(a[3]) - parseChineseDate(b[3]));
             
@@ -432,7 +407,6 @@
                 classesList.innerHTML += `<li>${weekdayStr}：${cls[0] || ''} - ${cls[5] || ''}</li>`;
             });
 
-            // 本星期課堂 
             let thisWeekClasses = classesData.filter(row => row[6] && row[6].includes(selectedName) && isDateInWeek(parseChineseDate(row[3]), selectedSunday));
             
             thisWeekClasses.sort((a, b) => parseChineseDate(a[3]) - parseChineseDate(b[3]));
@@ -446,9 +420,7 @@
                 thisWeekClassesList.innerHTML += `<li>${weekdayStr}：${cls[0] || ''} - ${cls[5] || ''}</li>`;
             });
 
-            // ===== 繼續處理 Time Prediction 的資料及公眾假期計算 =====
-            
-            // 計算選定星期的星期一至五是否包含公眾假期
+            // ===== 處理 Time Prediction 及公眾假期計算 =====
             let publicHolidaysCount = 0;
             let holidaysDetails = [];
 
@@ -476,6 +448,8 @@
             let afterClassHours = 0;
             let totalClasses = thisWeekClasses.length;
 
+            let dailyLatestEndTime = {}; 
+
             thisWeekClasses.forEach(cls => {
                 let dateObj = parseChineseDate(cls[3]);
                 if (!dateObj) return;
@@ -483,13 +457,34 @@
                 let isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
                 let hours = calculateHours(cls[5]);
                 
-                if (isWeekend) weekendTeachingH += hours;
-                else {
+                if (isWeekend) {
+                    weekendTeachingH += hours;
+                } else {
                     weekdayTeachingH += hours;
-                    classDaysCount.add(cls[3]); 
-                    afterClassHours += calculateAfterClassHours(cls[5]);
+                    let dateStr = cls[3];
+                    classDaysCount.add(dateStr); 
+
+                    let timeStr = cls[5];
+                    if (timeStr) {
+                        let parts = timeStr.split('-');
+                        if (parts.length === 2) {
+                            let endParts = parts[1].split(':').map(Number);
+                            let endMin = endParts[0] * 60 + endParts[1];
+                            if (!dailyLatestEndTime[dateStr] || endMin > dailyLatestEndTime[dateStr]) {
+                                dailyLatestEndTime[dateStr] = endMin;
+                            }
+                        }
+                    }
                 }
             });
+
+            let limitMin = 18 * 60;
+            for (let date in dailyLatestEndTime) {
+                let lastEndMin = dailyLatestEndTime[date];
+                if (lastEndMin < limitMin) {
+                    afterClassHours += (limitMin - lastEndMin) / 60;
+                }
+            }
 
             let transH = classDaysCount.size * 1; 
             let lunchH = workDays * 1;
@@ -531,7 +526,6 @@
 
         populateWeekSelect();
         
-        // 載入資料並在載入完成後初始化拖拉功能
         loadData().then(() => {
             const sortableOptions = {
                 group: 'todo-cards', 
